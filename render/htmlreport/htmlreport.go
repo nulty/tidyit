@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"tidy/internal/fsx"
@@ -133,4 +135,26 @@ func preview(items []report.Item) string {
 		s += fmt.Sprintf(" and %d more", rest)
 	}
 	return s
+}
+
+// WriteFile writes the report to path. It writes a temporary file in the
+// same folder first, so a failed run never leaves half a report.
+func WriteFile(path string, rep *report.Report, groups []view.Group, opt Options) error {
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tidy-report-*.html")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if err := Render(tmp, rep, groups, opt); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), path)
 }

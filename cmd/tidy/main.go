@@ -17,20 +17,13 @@ import (
 	"time"
 	"unsafe"
 
-	"tidy/internal/checks/apt"
-	"tidy/internal/checks/bleachbit"
-	"tidy/internal/checks/core"
-	"tidy/internal/checks/docker"
-	"tidy/internal/checks/flatpak"
-	"tidy/internal/checks/network"
-	"tidy/internal/checks/snap"
-	"tidy/internal/checks/systemd"
+	"tidy/internal/app"
 	"tidy/internal/config"
 	"tidy/internal/engine"
-	"tidy/internal/external"
 	"tidy/pkg/report"
 	"tidy/render/htmlreport"
 	"tidy/render/term"
+	"tidy/render/view"
 )
 
 const usage = `tidy: report stale things on this machine (read-only)
@@ -67,36 +60,6 @@ func main() {
 	}
 }
 
-// registry returns the built-in plugins followed by external ones, with
-// warnings for external plugins that could not be loaded.
-func registry() (*engine.Registry, []string) {
-	r := &engine.Registry{}
-	for _, p := range core.Plugins() {
-		r.Add(p)
-	}
-	r.Add(docker.Plugin())
-	r.Add(snap.Plugin())
-	r.Add(flatpak.Plugin())
-	r.Add(apt.Plugin())
-	r.Add(network.Plugin())
-	r.Add(systemd.Plugin())
-	r.Add(bleachbit.Plugin())
-
-	builtin := map[string]bool{}
-	for _, p := range r.Plugins() {
-		builtin[p.Manifest.ID] = true
-	}
-	ext, warnings := external.LoadAll(external.Dirs())
-	for _, p := range ext {
-		if builtin[p.Manifest.ID] {
-			warnings = append(warnings, fmt.Sprintf("plugin %s: id %q is a built-in plugin; skipping", p.Dir, p.Manifest.ID))
-			continue
-		}
-		r.Add(p)
-	}
-	return r, warnings
-}
-
 type runOpts struct {
 	json, onlyFlagged, verbose, full bool
 	checks, configPath, html         string
@@ -116,24 +79,17 @@ func runFlags(out io.Writer) (*flag.FlagSet, *runOpts) {
 	return fs, o
 }
 
-func loadConfig(path string) (*config.Config, error) {
-	if path != "" {
-		return config.Load(path, true)
-	}
-	return config.Load(config.DefaultPath(), false)
-}
-
 func runCmd(args []string) error {
 	fs, o := runFlags(os.Stderr)
 	fs.Usage = func() { fmt.Fprint(os.Stderr, usage); fs.PrintDefaults() }
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	cfg, err := loadConfig(o.configPath)
+	cfg, err := app.LoadConfig(o.configPath)
 	if err != nil {
 		return err
 	}
-	reg, warnings := registry()
+	reg, warnings := app.Registry()
 	insts, iw := reg.Instances(cfg)
 	warnings = append(warnings, iw...)
 	var patterns []string
@@ -155,21 +111,15 @@ func runCmd(args []string) error {
 	runner := engine.Runner{Concurrency: cfg.Run.Concurrency, Timeout: cfg.Run.Timeout}
 	host, _ := os.Hostname()
 
-	enabled := 0
-	for _, in := range insts {
-		if in.Enabled {
-			enabled++
-		}
-	}
-	progress := newProgress(os.Stderr, enabled, !o.json && isTerminal(os.Stderr))
+	progress := newProgress(os.Stderr, app.Enabled(insts), !o.json && isTerminal(os.Stderr))
 	started := time.Now()
 	rep := engine.Collect(runner.Run(ctx, insts), host, progress.event)
 	rep.StartedAt = started
 	progress.done()
-	sortResults(rep, insts)
+	app.SortResults(rep, insts)
 
 	if o.html != "" {
-		return writeHTML(o.html, rep, groups(rep, reg))
+		return writeHTML(o.html, rep, app.Groups(rep, reg))
 	}
 	if o.json {
 		enc := json.NewEncoder(os.Stdout)
@@ -181,73 +131,29 @@ func runCmd(args []string) error {
 	if tty {
 		width = termWidth(os.Stdout)
 	}
-	term.Render(os.Stdout, rep, groups(rep, reg), term.Options{
+	term.Render(os.Stdout, rep, app.Groups(rep, reg), term.Options{
 		Color:       tty && os.Getenv("NO_COLOR") == "",
 		OnlyFlagged: o.onlyFlagged,
 		Full:        o.full,
 		Verbose:     o.verbose,
 		Width:       width,
-		Headline:    []string{"disk.usage"},
+		Headline:    app.Headline,
 	})
 	return nil
 }
 
-// writeHTML writes the HTML report to path, or stdout for "-". It writes
-// to a temporary file first so a failed run never leaves half a report.
-func writeHTML(path string, rep *report.Report, gs []term.Group) error {
-	opt := htmlreport.Options{Headline: []string{"disk.usage"}}
+// writeHTML writes the HTML report to path, or stdout for "-".
+func writeHTML(path string, rep *report.Report, gs []view.Group) error {
+	opt := htmlreport.Options{Headline: app.Headline}
 	if path == "-" {
 		return htmlreport.Render(os.Stdout, rep, gs, opt)
 	}
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".tidy-report-*.html")
-	if err != nil {
-		return err
-	}
-	defer os.Remove(tmp.Name())
-	if err := htmlreport.Render(tmp, rep, gs, opt); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Chmod(0o644); err != nil {
-		tmp.Close()
-		return err
-	}
-	if err := tmp.Close(); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp.Name(), path); err != nil {
+	if err := htmlreport.WriteFile(path, rep, gs, opt); err != nil {
 		return err
 	}
 	abs, _ := filepath.Abs(path)
 	fmt.Fprintf(os.Stderr, "tidy: wrote %s\n", abs)
 	return nil
-}
-
-// sortResults puts results back in instance order (they arrive in
-// completion order).
-func sortResults(rep *report.Report, insts []*engine.Instance) {
-	pos := map[string]int{}
-	for i, in := range insts {
-		pos[in.ID] = i
-	}
-	sort.SliceStable(rep.Results, func(i, j int) bool { return pos[rep.Results[i].ID] < pos[rep.Results[j].ID] })
-}
-
-// groups sections the results by plugin, in registry order.
-func groups(rep *report.Report, reg *engine.Registry) []term.Group {
-	var out []term.Group
-	for _, p := range reg.Plugins() {
-		g := term.Group{Name: p.Manifest.Name}
-		for _, r := range rep.Results {
-			if r.Plugin == p.Manifest.ID {
-				g.Results = append(g.Results, r)
-			}
-		}
-		if len(g.Results) > 0 {
-			out = append(out, g)
-		}
-	}
-	return out
 }
 
 func checksCmd(args []string) error {
@@ -257,11 +163,11 @@ func checksCmd(args []string) error {
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	cfg, err := loadConfig(*configPath)
+	cfg, err := app.LoadConfig(*configPath)
 	if err != nil {
 		return err
 	}
-	reg, warnings := registry()
+	reg, warnings := app.Registry()
 	insts, iw := reg.Instances(cfg)
 	warnings = append(warnings, iw...)
 	if cfg.Path != "" {
