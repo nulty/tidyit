@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Tidy
+Comment=See stale things on this laptop that cleaners miss
+Exec=tidy-gui
+Icon=edit-clear-all-symbolic
+Terminal=false
+Categories=System;
+Keywords=clean;disk;space;docker;snap;apt;cache;
+StartupNotify=true

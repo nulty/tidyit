@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Capture the tidy GUI's whole results page, light and dark, as PNGs.
+# Usage: scripts/gui-screenshots OUTDIR   (X11 session; needs xwd, ffmpeg)
+# Build bin/tidy-gui first. Closes any running tidy-gui.
+set -euo pipefail
+out=${1:?usage: $0 OUTDIR}
+cd "$(dirname "$0")/.."
+pkill -x tidy-gui || true
+sleep 1
+for scheme in light dark; do
+	export ADW_DEBUG_COLOR_SCHEME=default
+	[ "$scheme" = dark ] && export ADW_DEBUG_COLOR_SCHEME=prefer-dark
+	TIDY_GUI_SCREENSHOTS="$out/$scheme" ./bin/tidy-gui | while read -r kind path; do
+		[ "$kind" = shot ] || continue
+		# Raise the window (activating the app presents it), then grab it.
+		gdbus call --session --dest dev.tidy.Tidy --object-path /dev/tidy/Tidy \
+			--method org.freedesktop.Application.Activate '{}' >/dev/null
+		sleep 0.3
+		id=$(xwininfo -root -tree | awk '/"Tidy"/ {print $1; exit}')
+		xwd -id "$id" -silent | ffmpeg -loglevel error -y -f xwd_pipe -i - "$path"
+		echo "$path"
+	done
+done

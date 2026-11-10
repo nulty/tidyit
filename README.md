@@ -32,6 +32,23 @@ Settings go in `~/.config/tidy/config.toml` (overrides only; see
 
 Rebuild with the `go build` line after pulling changes.
 
+## Desktop app
+
+`tidy-gui` is the same report as a GTK4/libadwaita window: overview,
+flagged checks biggest first, and a copy button for each command. Like
+the CLI it never runs anything. It needs the GTK headers to build; the
+first build compiles the GTK bindings and takes around ten minutes, later
+ones a few seconds.
+
+    sudo apt install libgtk-4-dev libadwaita-1-dev libgirepository1.0-dev
+    eval "$(mise env -s bash)"
+    go build -o bin/tidy-gui ./cmd/tidy-gui
+    ln -s "$PWD/bin/tidy-gui" ~/.local/bin/tidy-gui
+    cp data/dev.tidy.Tidy.desktop ~/.local/share/applications/
+
+The bindings are pinned to gotk4-adwaita's `adw-1.5` branch to match the
+libadwaita in Ubuntu 24.04; newer branches need newer headers.
+
 ## Plugins
 
 External plugins are folders with a `plugin.toml` and an executable `run`,
