@@ -88,3 +88,37 @@ func TestSeedName(t *testing.T) {
 		}
 	}
 }
+
+func TestFindNeverOpened(t *testing.T) {
+	var snaps []snapInfo
+	var conns connections
+	if err := json.Unmarshal([]byte(snapsJSON), &snaps); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal([]byte(connsJSON), &conns); err != nil {
+		t.Fatal(err)
+	}
+	// A system service snap that was never "opened" must not be flagged.
+	snaps = append(snaps, snapInfo{Name: "cups", Type: "app", Base: "core24", Status: "active",
+		Apps: []struct {
+			Name        string `json:"name"`
+			Daemon      string `json:"daemon"`
+			DaemonScope string `json:"daemon-scope"`
+		}{{Name: "cupsd", Daemon: "simple", DaemonScope: "system"}, {Name: "lp"}}})
+	opened := map[string]bool{"firefox": true}
+	got := map[string][]string{}
+	for _, no := range findNeverOpened(snaps, conns, func(n string) bool { return opened[n] }) {
+		var frees []string
+		for _, f := range no.frees {
+			frees = append(frees, f.Name)
+		}
+		got[no.snap.Name] = frees
+	}
+	// okular alone needs lxqt-support-core24; lonely-app needs nothing
+	// extra (core24 is still used). mesa-2404 is used by firefox; cups runs
+	// a system service; firefox has been opened.
+	want := map[string][]string{"okular": {"lxqt-support-core24"}, "lonely-app": nil}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+}

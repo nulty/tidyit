@@ -34,7 +34,9 @@ type snapInfo struct {
 	InstalledSize int64     `json:"installed-size"`
 	InstallDate   time.Time `json:"install-date"`
 	Apps          []struct {
-		Name string `json:"name"`
+		Name        string `json:"name"`
+		Daemon      string `json:"daemon"`       // "" for commands
+		DaemonScope string `json:"daemon-scope"` // "system" or "user"
 	} `json:"apps"`
 }
 
@@ -103,46 +105,41 @@ type unusedSnap struct {
 	via  []string // its only users, themselves unused; empty if it never had any
 }
 
-// findUnused returns the support snaps (bases, and content providers with
-// no apps of their own) that no other installed snap uses, in the order
-// they can be removed. A snap counts as used by another that has it as
-// base, is connected to its content, or names it as default provider of a
-// content plug (connected or not). Snaps used only by unused snaps are
-// unused too.
-func findUnused(snaps []snapInfo, conns connections) []unusedSnap {
-	installed := map[string]snapInfo{}
+// graph records which installed snaps use which.
+type graph struct {
+	installed map[string]snapInfo
+	names     []string                   // installed, sorted
+	providers map[string]bool            // snaps with content slots
+	users     map[string]map[string]bool // snap -> snaps that use it
+}
+
+// newGraph links snaps: a snap uses another that is its base, that it is
+// connected to for content, or that it names as default provider of a
+// content plug (connected or not).
+func newGraph(snaps []snapInfo, conns connections) *graph {
+	g := &graph{installed: map[string]snapInfo{}, providers: map[string]bool{}, users: map[string]map[string]bool{}}
 	for _, s := range snaps {
 		if s.Status == "" || s.Status == "active" || s.Status == "installed" {
-			installed[s.Name] = s
+			g.installed[s.Name] = s
+			g.names = append(g.names, s.Name)
 		}
 	}
-	providers := map[string]bool{}
+	sort.Strings(g.names)
 	for _, sl := range conns.Slots {
 		if sl.Interface == "content" {
-			providers[sl.Snap] = true
+			g.providers[sl.Snap] = true
 		}
 	}
-	kind := func(s snapInfo) string {
-		switch {
-		case s.Type == "base":
-			return "base"
-		case s.Type == "app" && len(s.Apps) == 0 && providers[s.Name]:
-			return "content snap"
-		}
-		return ""
-	}
-
-	users := map[string]map[string]bool{} // snap -> snaps that use it
 	use := func(user, used string) {
 		if user == used || used == "" {
 			return
 		}
-		if users[used] == nil {
-			users[used] = map[string]bool{}
+		if g.users[used] == nil {
+			g.users[used] = map[string]bool{}
 		}
-		users[used][user] = true
+		g.users[used][user] = true
 	}
-	for _, s := range installed {
+	for _, s := range g.installed {
 		use(s.Name, s.Base)
 	}
 	for _, c := range conns.Established {
@@ -159,28 +156,43 @@ func findUnused(snaps []snapInfo, conns connections) []unusedSnap {
 			use(p.Snap, name)
 		}
 	}
+	return g
+}
 
-	var names []string
-	for n := range installed {
-		names = append(names, n)
+// supportKind says whether s is a support snap: a base, or a content
+// provider with no apps of its own. "" means it is not.
+func (g *graph) supportKind(s snapInfo) string {
+	switch {
+	case s.Type == "base":
+		return "base"
+	case s.Type == "app" && len(s.Apps) == 0 && g.providers[s.Name]:
+		return "content snap"
 	}
-	sort.Strings(names)
+	return ""
+}
 
+// unusedWith returns the support snaps no installed snap uses once the
+// snaps in gone are removed, in the order they can be removed. Snaps used
+// only by unused snaps are unused too.
+func (g *graph) unusedWith(gone map[string]bool) []unusedSnap {
 	unused := map[string]bool{}
+	for n := range gone {
+		unused[n] = true
+	}
 	var out []unusedSnap
 	for changed := true; changed; {
 		changed = false
-		for _, n := range names {
-			s := installed[n]
-			k := kind(s)
+		for _, n := range g.names {
+			s := g.installed[n]
+			k := g.supportKind(s)
 			if k == "" || unused[n] {
 				continue
 			}
 			var via []string
 			live := false
-			for u := range users[n] {
-				if _, ok := installed[u]; !ok {
-					continue // e.g. a plug of a snap being removed
+			for u := range g.users[n] {
+				if _, ok := g.installed[u]; !ok {
+					continue
 				}
 				if !unused[u] {
 					live = true
@@ -198,6 +210,11 @@ func findUnused(snaps []snapInfo, conns connections) []unusedSnap {
 		}
 	}
 	return out
+}
+
+// findUnused returns the support snaps nothing installed uses.
+func findUnused(snaps []snapInfo, conns connections) []unusedSnap {
+	return newGraph(snaps, conns).unusedWith(nil)
 }
 
 var seedName = regexp.MustCompile(`^\s*-?\s*name:\s*"?([a-z0-9-]+)"?\s*$`)
@@ -232,13 +249,7 @@ func unusedSupport(ctx context.Context, _ engine.Input) (engine.Outcome, error) 
 	var out engine.Outcome
 	for _, u := range findUnused(snaps, conns) {
 		s := u.snap
-		path := filepath.Join(snapsDir, s.Name+"_"+s.Revision+".snap")
-		size := s.InstalledSize
-		if fi, err := os.Stat(path); err == nil {
-			if st, ok := fi.Sys().(*syscall.Stat_t); ok {
-				size = st.Blocks * 512
-			}
-		}
+		path, size := s.file()
 		detail := s.Kind() + u.kindDetail()
 		if seed[s.Name] {
 			detail += ", came with the system"
@@ -270,4 +281,17 @@ func (s snapInfo) Kind() string {
 		return "base"
 	}
 	return "content snap"
+}
+
+// file returns the path of the snap's current revision and its size on
+// disk, falling back to snapd's reported size.
+func (s snapInfo) file() (string, int64) {
+	path := filepath.Join(snapsDir, s.Name+"_"+s.Revision+".snap")
+	size := s.InstalledSize
+	if fi, err := os.Stat(path); err == nil {
+		if st, ok := fi.Sys().(*syscall.Stat_t); ok {
+			size = st.Blocks * 512
+		}
+	}
+	return path, size
 }

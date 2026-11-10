@@ -36,9 +36,14 @@ func Plugin() *engine.Plugin {
 				Title:       "Unused snap runtimes",
 				Description: "Bases and content snaps (shared libraries, themes) that no installed snap uses, usually left behind when an app was removed.",
 				Hint:        "check first: snap connections <name>",
+			}, {
+				ID:          "never-opened",
+				Title:       "Snap apps never opened",
+				Description: "App snaps you have never run (snapd creates ~/snap/<name> on first run), with the runtimes only they need. Snaps that run system services are left out.",
+				Hint:        "the command also removes the runtimes only that app needs; open the app first if unsure what it is",
 			}},
 		},
-		Checks: map[string]engine.CheckFunc{"old-revisions": oldRevisions, "unused-support": unusedSupport},
+		Checks: map[string]engine.CheckFunc{"old-revisions": oldRevisions, "unused-support": unusedSupport, "never-opened": neverOpenedApps},
 	}
 }
 
