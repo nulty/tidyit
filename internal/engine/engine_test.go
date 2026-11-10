@@ -199,3 +199,26 @@ func TestLockSerialisesPlugin(t *testing.T) {
 		t.Fatalf("locked checks overlapped: max %d at once", maxRunning.Load())
 	}
 }
+
+func TestDefaultOffNeedsConfigOrCheckFlag(t *testing.T) {
+	newReg := func() *Registry {
+		p := testPlugin()
+		p.Manifest.Checks[1].DefaultOff = true // t.b
+		r := &Registry{}
+		r.Add(p)
+		return r
+	}
+	insts, _ := newReg().Instances(&config.Config{Checks: map[string]*config.Entry{}})
+	if byID(insts)["t.b"].Enabled {
+		t.Fatal("t.b should be off by default")
+	}
+	insts, _ = newReg().Instances(loadTOML(t, "[checks.t.b]\nenabled = true\n"))
+	if !byID(insts)["t.b"].Enabled {
+		t.Fatal("config should turn t.b on")
+	}
+	insts, _ = newReg().Instances(&config.Config{Checks: map[string]*config.Entry{}})
+	kept, _ := Filter(insts, []string{"t.b"})
+	if len(kept) != 1 || !kept[0].Enabled {
+		t.Fatal("--check t.b should run it")
+	}
+}

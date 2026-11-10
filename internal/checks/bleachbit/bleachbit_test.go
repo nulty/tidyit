@@ -16,6 +16,8 @@ func TestParsePreviewGroupsByFolder(t *testing.T) {
 		"Vacuum ?B " + h + "/.config/google-chrome/Default/History",
 		"Delete 8.2kB " + h + "/.cache/thumbnails/normal/a.png",
 		"Delete 8.2kB " + h + "/.cache/thumbnails/normal/b.png",
+		"Delete 8.2kB " + h + "/.cache/thumbnails/normal/b.png",             // listed again by a second cleaner
+		"Clean file ?B " + h + "/.config/google-chrome/Default/Preferences", // repeated special op
 		"Delete 1kB " + h + "/.cache/loose-file",
 		"Delete 2kB /var/cache/thing/x",
 		"",
@@ -24,8 +26,8 @@ func TestParsePreviewGroupsByFolder(t *testing.T) {
 		"Special operations: 2",
 	}, "\n")
 	s := parsePreview(strings.NewReader(out))
-	if s.files != 6 || s.special != 2 || s.recover != "1.55MB" {
-		t.Fatalf("totals: files %d special %d recover %q", s.files, s.special, s.recover)
+	if s.files != 6 || s.special != 2 || s.dupes != 1 || s.size != 1_535_800 {
+		t.Fatalf("totals: files %d special %d dupes %d size %d", s.files, s.special, s.dupes, s.size)
 	}
 	want := map[string]struct {
 		size           int64

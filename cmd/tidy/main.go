@@ -80,7 +80,7 @@ func runFlags(out io.Writer) (*flag.FlagSet, *runOpts) {
 	fs.BoolVar(&o.json, "json", false, "print the report as JSON")
 	fs.BoolVar(&o.onlyFlagged, "only-flagged", false, "hide checks that found nothing or were skipped")
 	fs.BoolVar(&o.verbose, "v", false, "show timings and all notes")
-	fs.StringVar(&o.checks, "check", "", "comma-separated check ids or globs to run, e.g. docker,downloads")
+	fs.StringVar(&o.checks, "check", "", "comma-separated check ids, globs or plugin ids to run, e.g. docker,downloads (runs them even if off)")
 	fs.StringVar(&o.configPath, "config", "", "config file (default "+config.DefaultPath()+")")
 	return fs, o
 }
@@ -195,8 +195,11 @@ func checksCmd(args []string) error {
 	}
 	for _, in := range insts {
 		state := ""
-		if !in.Enabled {
-			state = "  (disabled)"
+		switch {
+		case !in.Enabled && in.Spec.DefaultOff:
+			state = fmt.Sprintf("  (off by default; run with --check %s, or set enabled = true in [checks.%s])", in.ID, in.ID)
+		case !in.Enabled:
+			state = "  (disabled in config)"
 		}
 		if in.OptErr != nil {
 			state += "  (config error: " + in.OptErr.Error() + ")"

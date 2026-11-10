@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"os"
 	"os/exec"
@@ -32,6 +33,9 @@ func Plugin() *engine.Plugin {
 				Title:       "BleachBit preview",
 				Description: "What BleachBit would delete with your selection, grouped by folder. Nothing is deleted.",
 				Timeout:     "120s",
+				// Overlaps with tidy's own cache checks and is the slowest
+				// check, so it only runs when asked for.
+				DefaultOff: true,
 				Options: map[string]manifest.Option{
 					"selection": {Type: manifest.TypeString, Default: "preset",
 						Enum:        []string{"preset", "all-but-warning", "custom"},
@@ -95,9 +99,14 @@ func preview(ctx context.Context, in engine.Input) (engine.Outcome, error) {
 	if sum.files == 0 && sum.special == 0 {
 		return out, nil
 	}
-	out.Summary = fmt.Sprintf("%s in %d files", sum.recover, sum.files)
+	out.Summary = fmt.Sprintf("%s in %d files", fsx.Human(sum.size), sum.files)
 	if sum.special > 0 {
 		out.Summary += fmt.Sprintf(", plus %d database cleanups", sum.special)
+	}
+	if sum.dupes > 0 {
+		out.Notes = append(out.Notes, fmt.Sprintf(
+			"%d files were listed by more than one BleachBit cleaner and are counted once (BleachBit's own total counts them each time)",
+			sum.dupes))
 	}
 
 	groups := sum.sortedGroups()
@@ -140,8 +149,9 @@ type group struct {
 
 type previewSummary struct {
 	groups         map[string]*group
-	files, special int
-	recover        string // BleachBit's own total, e.g. "10.76GB"
+	files, special int   // unique paths
+	size           int64 // bytes, each file counted once
+	dupes          int   // Delete lines for a file already listed
 }
 
 func (s *previewSummary) sortedGroups() []*group {
@@ -164,10 +174,15 @@ func (s *previewSummary) sortedGroups() []*group {
 //	Clean file ?B /home/me/.config/google-chrome/Default/Preferences
 //	Vacuum ?B /home/me/.config/google-chrome/Default/History
 //	Disk space to be recovered: 10.76GB
-//	Files to be deleted: 248580
-//	Special operations: 44
+//
+// When several selected cleaners cover the same files (system.cache and
+// brave.cache both list Brave's cache), BleachBit prints each file once
+// per cleaner and its footer total adds them all. So the footer is
+// ignored and every path is counted once, by a 64-bit hash of the path
+// to keep memory small for hundreds of thousands of files.
 func parsePreview(r io.Reader) *previewSummary {
 	s := &previewSummary{groups: map[string]*group{}}
+	seen := map[uint64]struct{}{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 64*1024), 1<<20)
 	for sc.Scan() {
@@ -183,15 +198,24 @@ func parsePreview(r io.Reader) *previewSummary {
 		case strings.HasPrefix(line, "Vacuum "):
 			size, path, _ = strings.Cut(strings.TrimPrefix(line, "Vacuum "), " ")
 			special = true
-		case strings.HasPrefix(line, "Disk space to be recovered: "):
-			s.recover = strings.TrimPrefix(line, "Disk space to be recovered: ")
-			continue
 		default:
 			continue
 		}
 		if path == "" {
 			continue
 		}
+		h := fnv.New64a()
+		if special {
+			h.Write([]byte{0}) // a file both deleted and vacuumed counts once in each
+		}
+		h.Write([]byte(path))
+		if _, dup := seen[h.Sum64()]; dup {
+			if !special {
+				s.dupes++
+			}
+			continue
+		}
+		seen[h.Sum64()] = struct{}{}
 		key := groupKey(path)
 		g := s.groups[key]
 		if g == nil {
@@ -202,17 +226,12 @@ func parsePreview(r io.Reader) *previewSummary {
 			g.special++
 			s.special++
 		} else {
+			n := fsx.ParseDecimalSize(size)
 			g.files++
+			g.size += n
 			s.files++
-			g.size += fsx.ParseDecimalSize(size)
+			s.size += n
 		}
-	}
-	if s.recover == "" {
-		var total int64
-		for _, g := range s.groups {
-			total += g.size
-		}
-		s.recover = fsx.Human(total)
 	}
 	return s
 }

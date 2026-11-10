@@ -71,7 +71,7 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 				continue
 			}
 			add(&Instance{ID: p.Manifest.ID + "." + spec.ID, Title: spec.Title, Hint: spec.Hint,
-				Plugin: p, Spec: spec, Enabled: true, Origin: "default"})
+				Plugin: p, Spec: spec, Enabled: !spec.DefaultOff, Origin: "default"})
 		}
 		for _, ps := range p.Presets {
 			spec, ok := p.Manifest.Check(ps.Check)
@@ -83,7 +83,7 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 			if hint == "" {
 				hint = spec.Hint
 			}
-			add(&Instance{ID: ps.ID, Title: ps.Title, Hint: hint, Plugin: p, Spec: spec, Enabled: true, Origin: "preset"})
+			add(&Instance{ID: ps.ID, Title: ps.Title, Hint: hint, Plugin: p, Spec: spec, Enabled: !spec.DefaultOff, Origin: "preset"})
 			presetOpts[ps.ID] = ps.Options
 		}
 	}
@@ -150,7 +150,10 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 }
 
 // Filter keeps instances whose id matches any of the glob patterns
-// (path.Match syntax, e.g. "docker.*"). No patterns keeps everything.
+// (path.Match syntax, e.g. "docker.*", or a plugin id such as "docker").
+// No patterns keeps everything. Instances that are kept are enabled:
+// naming a check explicitly runs it even if it is off by default or
+// disabled in config.
 func Filter(insts []*Instance, patterns []string) ([]*Instance, error) {
 	if len(patterns) == 0 {
 		return insts, nil
@@ -164,6 +167,7 @@ func Filter(insts []*Instance, patterns []string) ([]*Instance, error) {
 			}
 			// Also match on the plugin id, so --check docker works.
 			if ok || pat == in.Plugin.Manifest.ID {
+				in.Enabled = true
 				out = append(out, in)
 				break
 			}

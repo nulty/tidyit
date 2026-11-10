@@ -41,6 +41,9 @@ type CheckSpec struct {
 	// Timeout is the default time limit for this check, e.g. "60s", for
 	// checks known to be slow. Config can still override it.
 	Timeout string `toml:"timeout" json:"timeout,omitempty"`
+	// DefaultOff checks only run when enabled in config or named with
+	// --check, e.g. slow checks or ones that wrap another tool.
+	DefaultOff bool `toml:"default_off" json:"default_off,omitempty"`
 }
 
 // Check returns the spec with the given id.
