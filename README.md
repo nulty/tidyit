@@ -34,9 +34,11 @@ Rebuild with the `go build` line after pulling changes.
 
 ## Desktop app
 
-`tidy-gui` is the same report as a GTK4/libadwaita window: overview,
-flagged checks biggest first, and a copy button for each command. Like
-the CLI it never runs anything. It needs the GTK headers to build; the
+`tidy-gui` is the same report as a GTK4/libadwaita window. A sidebar
+shows disk usage and the flagged checks, grouped into safe to remove,
+worth reviewing and your call. Picking one opens its items, each with a
+copy button for its command. Below 600 px wide the sidebar and the page
+take turns. Like the CLI it never runs anything. It needs the GTK headers to build; the
 first build compiles the GTK bindings and takes around ten minutes, later
 ones a few seconds.
 

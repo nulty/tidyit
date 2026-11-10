@@ -28,6 +28,7 @@ const appID = "dev.tidy.Tidy"
 
 func main() {
 	a := adw.NewApplication(appID, gio.ApplicationFlagsNone)
+	a.ConnectStartup(loadCSS)
 	a.ConnectActivate(func() {
 		if w := a.ActiveWindow(); w != nil {
 			w.Present()
@@ -46,47 +47,61 @@ func main() {
 type window struct {
 	*adw.ApplicationWindow
 	toasts   *adw.ToastOverlay
-	title    *adw.WindowTitle
-	stack    *gtk.Stack
+	stack    *gtk.Stack // progress, results or failure
 	progress *adw.StatusPage
-	results  *adw.PreferencesPage // replaced on every run
 	rescan   *gio.SimpleAction
 	save     *gio.SimpleAction
 
+	// The results: a sidebar of checks and a page for the selected one.
+	split        *adw.NavigationSplitView
+	sidebar      *gtk.ListBox // replaced on every run
+	sidebarView  *adw.ToolbarView
+	contentPage  *adw.NavigationPage
+	contentView  *adw.ToolbarView
+	contentTitle *adw.WindowTitle
+	scroll       *gtk.ScrolledWindow // the shown page, for screenshots
+
 	cancel  context.CancelFunc // stops the current run, nil when idle
 	closing bool
-	last    *finished // the last completed run, for saving
+	last    *finished // the last completed run
+	sel     string    // the selected sidebar key, kept across runs
 }
 
-// finished is a completed run.
+// finished is a completed run, with what the pages show worked out once.
 type finished struct {
-	rep      *report.Report
-	groups   []view.Group
-	warnings []string
+	rep         *report.Report
+	groups      []view.Group
+	warnings    []string
+	overview    view.Overview
+	disk        *mountUsage // nil if the disk check didn't run
+	otherMounts []mountUsage
+	diskSummary string
+}
+
+func newFinished(rep *report.Report, groups []view.Group, warnings []string) *finished {
+	res := &finished{rep: rep, groups: groups, warnings: warnings, overview: view.Build(groups, app.Headline)}
+	res.disk, res.otherMounts, res.diskSummary = diskUsage(rep.Results)
+	return res
+}
+
+// problems counts failed checks and plugin warnings.
+func (res *finished) problems() int { return len(res.overview.Errors) + len(res.warnings) }
+
+// result returns the flagged check with this id.
+func (res *finished) result(id string) (report.Result, bool) {
+	for _, r := range res.overview.Flagged {
+		if r.ID == id {
+			return r, true
+		}
+	}
+	return report.Result{}, false
 }
 
 func newWindow(a *adw.Application) *window {
-	w := &window{ApplicationWindow: adw.NewApplicationWindow(&a.Application)}
-	w.SetDefaultSize(760, 820)
+	w := &window{ApplicationWindow: adw.NewApplicationWindow(&a.Application), sel: keyOverview}
+	w.SetDefaultSize(1100, 780)
+	w.SetSizeRequest(360, 300)
 	w.SetTitle("Tidy")
-
-	w.title = adw.NewWindowTitle("Tidy", "")
-	header := adw.NewHeaderBar()
-	header.SetTitleWidget(w.title)
-
-	refresh := gtk.NewButtonFromIconName("view-refresh-symbolic")
-	refresh.SetTooltipText("Check Again (Ctrl+R)")
-	refresh.SetActionName("win.rescan")
-	header.PackStart(refresh)
-
-	menu := gio.NewMenu()
-	menu.Append("Save Report as HTML…", "win.save")
-	menuButton := gtk.NewMenuButton()
-	menuButton.SetIconName("open-menu-symbolic")
-	menuButton.SetTooltipText("Main Menu")
-	menuButton.SetMenuModel(menu)
-	menuButton.SetPrimary(true)
-	header.PackEnd(menuButton)
 
 	w.progress = adw.NewStatusPage()
 	w.progress.SetIconName("edit-find-symbolic")
@@ -98,14 +113,17 @@ func newWindow(a *adw.Application) *window {
 
 	w.stack = gtk.NewStack()
 	w.stack.SetTransitionType(gtk.StackTransitionTypeCrossfade)
-	w.stack.AddNamed(w.progress, "progress")
+	w.stack.AddNamed(withHeader(w.progress), "progress")
+	w.stack.AddNamed(w.buildSplit(), "results")
 
-	content := adw.NewToolbarView()
-	content.AddTopBar(header)
-	content.SetContent(w.stack)
 	w.toasts = adw.NewToastOverlay()
-	w.toasts.SetChild(content)
+	w.toasts.SetChild(w.stack)
 	w.SetContent(w.toasts)
+
+	// Below 600sp the sidebar and the page share the window, one at a time.
+	bp := adw.NewBreakpoint(adw.BreakpointConditionParse("max-width: 600sp"))
+	bp.AddSetter(w.split, "collapsed", true)
+	w.AddBreakpoint(bp)
 
 	w.rescan = gio.NewSimpleAction("rescan", nil)
 	w.rescan.ConnectActivate(func(*glib.Variant) { w.run() })
@@ -144,7 +162,6 @@ func (w *window) run() {
 	w.cancel = cancel
 	w.rescan.SetEnabled(false)
 	w.save.SetEnabled(false)
-	w.title.SetSubtitle("")
 	w.showProgress(0, total, nil)
 	w.stack.SetVisibleChildName("progress")
 
@@ -170,7 +187,7 @@ func (w *window) run() {
 		})
 		rep.StartedAt = started
 		app.SortResults(rep, insts)
-		res := &finished{rep: rep, groups: app.Groups(rep, reg), warnings: warnings}
+		res := newFinished(rep, app.Groups(rep, reg), warnings)
 		glib.IdleAdd(func() {
 			cancel()
 			w.cancel = nil
@@ -191,23 +208,123 @@ func (w *window) showProgress(done, total int, running []string) {
 	w.progress.SetDescription(desc)
 }
 
+// buildSplit makes the results layout: the sidebar page, with Check
+// Again, and the content page, with the run's details and the menu.
+func (w *window) buildSplit() *adw.NavigationSplitView {
+	refresh := gtk.NewButtonFromIconName("view-refresh-symbolic")
+	refresh.SetTooltipText("Check Again (Ctrl+R)")
+	refresh.SetActionName("win.rescan")
+	sideHeader := adw.NewHeaderBar()
+	sideHeader.PackStart(refresh)
+	sideHeader.SetTitleWidget(adw.NewWindowTitle("Tidy", ""))
+	w.sidebarView = adw.NewToolbarView()
+	w.sidebarView.AddTopBar(sideHeader)
+
+	menu := gio.NewMenu()
+	menu.Append("Save Report as HTML…", "win.save")
+	menuButton := gtk.NewMenuButton()
+	menuButton.SetIconName("open-menu-symbolic")
+	menuButton.SetTooltipText("Main Menu")
+	menuButton.SetMenuModel(menu)
+	menuButton.SetPrimary(true)
+	w.contentTitle = adw.NewWindowTitle("Overview", "")
+	header := adw.NewHeaderBar()
+	header.SetTitleWidget(w.contentTitle)
+	header.PackEnd(menuButton)
+	w.contentView = adw.NewToolbarView()
+	w.contentView.AddTopBar(header)
+
+	w.split = adw.NewNavigationSplitView()
+	w.split.SetMinSidebarWidth(260)
+	w.split.SetMaxSidebarWidth(320)
+	w.split.SetSidebar(adw.NewNavigationPage(w.sidebarView, "Tidy"))
+	w.contentPage = adw.NewNavigationPage(w.contentView, "Overview")
+	w.split.SetContent(w.contentPage)
+	return w.split
+}
+
 func (w *window) showResults(res *finished) {
 	w.last = res
 	w.save.SetEnabled(true)
 	rep := res.rep
-	w.title.SetSubtitle(fmt.Sprintf("%s · %s · took %s", rep.Host,
+	w.contentTitle.SetSubtitle(fmt.Sprintf("%s · %s · took %s", rep.Host,
 		rep.StartedAt.Format("Mon 2 Jan 15:04"), rep.FinishedAt.Sub(rep.StartedAt).Round(100*time.Millisecond)))
 
-	page := buildPage(res, w)
-	if w.results != nil {
-		w.stack.Remove(w.results)
+	w.sidebar = buildSidebar(res)
+	w.sidebar.ConnectRowSelected(func(row *gtk.ListBoxRow) {
+		if row != nil {
+			w.showPage(row.Name())
+		}
+	})
+	w.sidebar.ConnectRowActivated(func(*gtk.ListBoxRow) { w.split.SetShowContent(true) })
+	sw := gtk.NewScrolledWindow()
+	sw.SetPolicy(gtk.PolicyNever, gtk.PolicyAutomatic)
+	sw.SetChild(w.sidebar)
+	w.sidebarView.SetContent(sw)
+
+	// Keep the selection across runs while that check is still flagged.
+	if _, ok := res.result(w.sel); !ok && w.sel != keyOther {
+		w.sel = keyOverview
 	}
-	w.results = page
-	w.stack.AddNamed(page, "results")
+	w.selectRow(w.sel)
 	w.stack.SetVisibleChildName("results")
 	if dir := screenshotDir(); dir != "" {
 		w.takeScreenshots(dir)
 	}
+}
+
+// open shows the page for key, as if picked in the sidebar.
+func (w *window) open(key string) {
+	w.selectRow(key)
+	w.split.SetShowContent(true)
+}
+
+// selectRow selects key's sidebar row, which shows its page.
+func (w *window) selectRow(key string) {
+	for c := w.sidebar.FirstChild(); c != nil; c = gtk.BaseWidget(c).NextSibling() {
+		if row, ok := c.(*gtk.ListBoxRow); ok && row.Name() == key {
+			w.sidebar.SelectRow(row)
+			w.showPage(key) // in case it was already selected
+			return
+		}
+	}
+}
+
+// showPage builds and shows the page for key.
+func (w *window) showPage(key string) {
+	res := w.last
+	if res == nil {
+		return
+	}
+	var page *gtk.ScrolledWindow
+	title := "Overview"
+	switch key {
+	case keyOverview:
+		page = overviewPage(res, w)
+	case keyOther:
+		page, title = otherPage(res), "Other Checks"
+	default:
+		r, ok := res.result(key)
+		if !ok {
+			return
+		}
+		page, title = checkPage(r, w), r.Title
+	}
+	w.sel = key
+	w.scroll = page
+	w.contentView.SetContent(page)
+	w.contentPage.SetTitle(title)
+	w.contentTitle.SetTitle(title)
+	w.SetTitle("Tidy – " + title)
+}
+
+// withHeader gives a page a plain header bar, for the states before
+// there are results.
+func withHeader(child gtk.Widgetter) *adw.ToolbarView {
+	v := adw.NewToolbarView()
+	v.AddTopBar(adw.NewHeaderBar())
+	v.SetContent(child)
+	return v
 }
 
 // showFailure replaces the content with an error page.
@@ -225,7 +342,7 @@ func (w *window) showFailure(title, desc string) {
 	if old := w.stack.ChildByName("failure"); old != nil {
 		w.stack.Remove(old)
 	}
-	w.stack.AddNamed(page, "failure")
+	w.stack.AddNamed(withHeader(page), "failure")
 	w.stack.SetVisibleChildName("failure")
 	w.save.SetEnabled(false)
 }

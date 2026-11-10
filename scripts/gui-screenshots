@@ -16,7 +16,7 @@ for scheme in light dark; do
 		gdbus call --session --dest dev.tidy.Tidy --object-path /dev/tidy/Tidy \
 			--method org.freedesktop.Application.Activate '{}' >/dev/null
 		sleep 0.3
-		id=$(xwininfo -root -tree | awk '/"Tidy"/ {print $1; exit}')
+		id=$(xwininfo -root -tree | awk '/"Tidy( – [^"]*)?": \("tidy-gui"/ {print $1; exit}')
 		xwd -id "$id" -silent | ffmpeg -loglevel error -y -f xwd_pipe -i - "$path"
 		echo "$path"
 	done
