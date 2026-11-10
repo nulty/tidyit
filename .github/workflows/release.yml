@@ -15,6 +15,10 @@ jobs:
   release:
     # 24.04 ships libadwaita 1.5, the version the GUI's bindings are pinned to.
     runs-on: ubuntu-24.04
+    env:
+      # scripts/release builds with -trimpath; testing with it too lets both
+      # steps share one build cache, so the slow cgo GTK bindings compile once.
+      GOFLAGS: -trimpath
     steps:
       - uses: actions/checkout@v4
 
