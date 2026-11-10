@@ -22,3 +22,6 @@ to remove each item, and never runs anything.
 - External plugins in any language (protocol 1), with `home-usage`
   bundled as an example. Plugins are not yet pinned by hash.
 - Reports record the version that produced them (`generator`).
+- Released as a `.deb` and a tarball. Plugins installed system-wide
+  under `/usr/share/tidyit/plugins` are found, and a user's copy of a
+  plugin overrides an installed one.

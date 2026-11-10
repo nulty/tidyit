@@ -56,8 +56,11 @@ const (
 	maxStderr = 64 << 10 // kept from stderr (the tail)
 )
 
-// Dirs returns where tidyit looks for plugins: each entry of
-// $TIDYIT_PLUGIN_PATH (colon separated), then $XDG_DATA_HOME/tidyit/plugins.
+// Dirs returns where tidyit looks for plugins, first match winning: each
+// entry of $TIDYIT_PLUGIN_PATH (colon separated), then
+// $XDG_DATA_HOME/tidyit/plugins, then tidyit/plugins under each entry of
+// $XDG_DATA_DIRS (default /usr/local/share:/usr/share), where packages
+// install them.
 func Dirs() []string {
 	var dirs []string
 	for _, d := range filepath.SplitList(os.Getenv("TIDYIT_PLUGIN_PATH")) {
@@ -74,17 +77,29 @@ func Dirs() []string {
 	if data != "" {
 		dirs = append(dirs, filepath.Join(data, "tidyit", "plugins"))
 	}
+	system := os.Getenv("XDG_DATA_DIRS")
+	if system == "" {
+		system = "/usr/local/share:/usr/share"
+	}
+	for _, d := range filepath.SplitList(system) {
+		if d != "" {
+			dirs = append(dirs, filepath.Join(d, "tidyit", "plugins"))
+		}
+	}
 	return dirs
 }
 
 // LoadAll loads every plugin folder under dirs, in name order. A folder
 // that fails to load gives a warning, not an error, so one broken plugin
-// doesn't stop the run. Missing dirs are ignored.
+// doesn't stop the run. Missing dirs are ignored. A plugin whose id an
+// earlier dir already provided is skipped quietly, so a user's copy
+// overrides an installed one; the same id twice in one dir is a warning.
 func LoadAll(dirs []string) ([]*engine.Plugin, []string) {
 	var plugins []*engine.Plugin
 	var warnings []string
-	seen := map[string]string{}
-	for _, dir := range dirs {
+	seen := map[string]string{} // plugin id -> its folder
+	fromDir := map[string]int{} // plugin id -> index of the dir it came from
+	for i, dir := range dirs {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			if !errors.Is(err, os.ErrNotExist) {
@@ -106,10 +121,13 @@ func LoadAll(dirs []string) ([]*engine.Plugin, []string) {
 				continue
 			}
 			if prev, dup := seen[p.Manifest.ID]; dup {
-				warnings = append(warnings, fmt.Sprintf("plugin %s: id %q is already loaded from %s; skipping", pdir, p.Manifest.ID, prev))
+				if fromDir[p.Manifest.ID] == i {
+					warnings = append(warnings, fmt.Sprintf("plugin %s: id %q is already loaded from %s; skipping", pdir, p.Manifest.ID, prev))
+				}
 				continue
 			}
 			seen[p.Manifest.ID] = pdir
+			fromDir[p.Manifest.ID] = i
 			plugins = append(plugins, p)
 		}
 	}

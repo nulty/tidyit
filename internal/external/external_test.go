@@ -202,6 +202,41 @@ func TestLoadAll(t *testing.T) {
 	}
 }
 
+func TestLoadAllEarlierDirWins(t *testing.T) {
+	user, system := t.TempDir(), t.TempDir()
+	for _, root := range []string{user, system} {
+		if err := os.Rename(writePlugin(t, okManifest, "exit 0"), filepath.Join(root, "demo")); err != nil {
+			t.Fatal(err)
+		}
+	}
+	plugins, warnings := LoadAll([]string{user, system})
+	if len(plugins) != 1 || plugins[0].Dir != filepath.Join(user, "demo") || len(warnings) != 0 {
+		t.Fatalf("plugins %v, warnings %q", plugins, warnings)
+	}
+
+	// The same id twice in one dir is still a mistake worth reporting.
+	if err := os.Rename(writePlugin(t, okManifest, "exit 0"), filepath.Join(user, "demo-copy")); err != nil {
+		t.Fatal(err)
+	}
+	if _, warnings := LoadAll([]string{user}); len(warnings) != 1 || !strings.Contains(warnings[0], "already loaded") {
+		t.Fatalf("warnings %q", warnings)
+	}
+}
+
+func TestDirs(t *testing.T) {
+	t.Setenv("TIDYIT_PLUGIN_PATH", "/a:/b")
+	t.Setenv("XDG_DATA_HOME", "/home/u/.local/share")
+	t.Setenv("XDG_DATA_DIRS", "")
+	want := []string{"/a", "/b", "/home/u/.local/share/tidyit/plugins", "/usr/local/share/tidyit/plugins", "/usr/share/tidyit/plugins"}
+	if got := Dirs(); strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("got  %q\nwant %q", got, want)
+	}
+	t.Setenv("XDG_DATA_DIRS", "/opt/share")
+	if got := Dirs(); got[len(got)-1] != "/opt/share/tidyit/plugins" || len(got) != 4 {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestNeedsRootSkips(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("running as root")

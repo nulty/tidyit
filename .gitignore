@@ -1,1 +1,4 @@
 bin/
+dist/
+# Local mise settings, e.g. GH_TOKEN. Never commit.
+mise.local.toml

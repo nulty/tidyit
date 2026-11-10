@@ -22,6 +22,34 @@ It replaces the old `laptop-report` bash script (see git history).
 Settings go in `~/.config/tidyit/config.toml` (overrides only; see
 `internal/config/config.go` for the format).
 
+## Install
+
+Download a release from https://github.com/nulty/tidyit/releases. Both
+builds need Ubuntu 24.04 or later (or another distro with libadwaita 1.5)
+for the desktop app; the `tidyit` command runs anywhere.
+
+Debian or Ubuntu package, installed under `/usr`:
+
+    sudo apt install ./tidyit_0.1.0-beta.1_amd64.deb
+
+Tarball, installed under `~/.local` (or a prefix you give it):
+
+    tar xzf tidyit_0.1.0-beta.1_linux_amd64.tar.gz
+    tidyit_0.1.0-beta.1_linux_amd64/install.sh
+
+Uninstall with `sudo apt remove tidyit`, or `install.sh --uninstall`.
+
+## Release
+
+Add the version's section to `CHANGELOG.md`, commit, then tag and push:
+
+    git tag -a v0.1.0 -m "Tidy It v0.1.0"
+    git push origin v0.1.0
+
+The Release workflow tests, builds the tarball and .deb with
+`scripts/release`, and publishes them. `scripts/release vX.Y.Z` builds
+the same files locally into `dist/`.
+
 ## Install from this checkout
 
     eval "$(mise env -s bash)"

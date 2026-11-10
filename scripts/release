@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Build the release files for one version into dist/:
+#
+#   tidyit_VERSION_linux_amd64.tar.gz   both programs, the desktop entry, the
+#                                       bundled plugin and docs, plus install.sh
+#   tidyit_VERSION_amd64.deb            the same, installed under /usr
+#   SHA256SUMS
+#
+# Usage: scripts/release [vX.Y.Z[-pre]]   (default: the tag at HEAD)
+# Needs Go, libgtk-4-dev, libadwaita-1-dev and dpkg-dev, on Ubuntu 24.04
+# (the GUI links the libadwaita it is built against). The working tree must
+# be clean unless ALLOW_DIRTY=1.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+version=${1:-$(git describe --tags --exact-match 2>/dev/null || true)}
+if [[ ! $version =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]]; then
+	echo "release: need a version like v0.1.0 or v0.1.0-beta.1 (got '${version}'); tag HEAD or pass one" >&2
+	exit 1
+fi
+if [[ -n $(git status --porcelain) && ${ALLOW_DIRTY:-} != 1 ]]; then
+	echo "release: working tree has changes; commit them or set ALLOW_DIRTY=1" >&2
+	exit 1
+fi
+
+ver=${version#v}      # 0.1.0-beta.1
+debver=${ver/-/\~}    # 0.1.0~beta.1: dpkg sorts ~ before the final 0.1.0
+arch=amd64
+maintainer="Iain McNulty <iain@inulty.com>"
+homepage=https://github.com/nulty/tidyit
+
+stage=$(mktemp -d)
+trap 'rm -rf "$stage"' EXIT
+rm -rf dist
+mkdir -p dist
+
+# Build. The CLI needs no C libraries, so it is static and runs anywhere;
+# the GUI links GTK4 and libadwaita.
+ldflags="-s -w -X tidyit/internal/version.Version=$version"
+CGO_ENABLED=0 go build -trimpath -ldflags "$ldflags" -o "$stage/tidyit" ./cmd/tidyit
+CGO_ENABLED=1 go build -trimpath -ldflags "$ldflags" -o "$stage/tidyit-gui" ./cmd/tidyit-gui
+got=$("$stage/tidyit" version)
+[[ $got == "tidyit $version" ]] || { echo "release: binary reports '$got'" >&2; exit 1; }
+
+# layout PREFIX: install everything under PREFIX (bin/, share/).
+layout() {
+	local p=$1
+	install -Dm755 "$stage/tidyit" "$p/bin/tidyit"
+	install -Dm755 "$stage/tidyit-gui" "$p/bin/tidyit-gui"
+	install -Dm644 data/com.inulty.TidyIt.desktop "$p/share/applications/com.inulty.TidyIt.desktop"
+	install -Dm644 plugins/home-usage/plugin.toml "$p/share/tidyit/plugins/home-usage/plugin.toml"
+	install -Dm755 plugins/home-usage/run "$p/share/tidyit/plugins/home-usage/run"
+	install -Dm644 plugins/home-usage/README.md "$p/share/tidyit/plugins/home-usage/README.md"
+	install -Dm644 README.md "$p/share/doc/tidyit/README.md"
+	install -Dm644 CHANGELOG.md "$p/share/doc/tidyit/CHANGELOG.md"
+}
+
+# Tarball: a prefix tree with an installer that defaults to ~/.local.
+name=tidyit_${ver}_linux_${arch}
+layout "$stage/$name"
+install -Dm644 LICENSE "$stage/$name/share/doc/tidyit/LICENSE"
+cat >"$stage/$name/install.sh" <<'EOS'
+#!/bin/sh
+# Install Tidy It under PREFIX (default ~/.local): PREFIX/bin/tidyit,
+# PREFIX/bin/tidyit-gui, the desktop entry and the bundled plugin.
+# Remove it again with: ./install.sh --uninstall [PREFIX]
+set -eu
+here=$(cd "$(dirname "$0")" && pwd)
+if [ "${1:-}" = --uninstall ]; then
+	prefix=${2:-$HOME/.local}
+	rm -f "$prefix/bin/tidyit" "$prefix/bin/tidyit-gui" "$prefix/share/applications/com.inulty.TidyIt.desktop"
+	rm -rf "$prefix/share/tidyit/plugins/home-usage" "$prefix/share/doc/tidyit"
+	echo "Removed Tidy It from $prefix"
+	exit 0
+fi
+prefix=${1:-$HOME/.local}
+mkdir -p "$prefix"
+cp -R "$here/bin" "$here/share" "$prefix/"
+echo "Installed Tidy It in $prefix. Run: tidyit   (desktop app: tidyit-gui)"
+case ":$PATH:" in *":$prefix/bin:"*) ;; *) echo "Note: $prefix/bin is not on your PATH." ;; esac
+EOS
+chmod 755 "$stage/$name/install.sh"
+tar -C "$stage" --owner=0 --group=0 --sort=name -czf "dist/$name.tar.gz" "$name"
+
+# Debian package.
+deb=$stage/deb
+layout "$deb/usr"
+cat >"$deb/usr/share/doc/tidyit/copyright" <<EOF
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: tidyit
+Source: $homepage
+
+Files: *
+Copyright: 2026 Iain McNulty
+License: Expat
+$(sed -e 's/^$/./' -e 's/^/ /' LICENSE)
+EOF
+chmod 644 "$deb/usr/share/doc/tidyit/copyright"
+# Work out the GUI's library dependencies the way Debian packaging does.
+mkdir -p "$stage/shlibs/debian"
+printf 'Source: tidyit\n\nPackage: tidyit\nArchitecture: any\n' >"$stage/shlibs/debian/control"
+depends=$(cd "$stage/shlibs" && dpkg-shlibdeps -O "$deb/usr/bin/tidyit-gui" 2>/dev/null | sed -n 's/^shlibs:Depends=//p')
+[[ -n $depends ]] || { echo "release: dpkg-shlibdeps found no dependencies" >&2; exit 1; }
+mkdir -p "$deb/DEBIAN"
+cat >"$deb/DEBIAN/control" <<EOF
+Package: tidyit
+Version: $debver
+Section: utils
+Priority: optional
+Architecture: $arch
+Maintainer: $maintainer
+Installed-Size: $(du -sk "$deb/usr" | cut -f1)
+Depends: $depends
+Suggests: docker.io, flatpak, bleachbit
+Homepage: $homepage
+Description: report stale things on a Linux laptop that cleaners miss
+ Tidy It finds unused Docker images and volumes, old snap revisions, apt
+ leftovers, stale network connections, failed systemd units, old downloads,
+ large caches and more. It is read-only: it shows each item, how safe it is
+ to remove and the command that removes it, and never runs anything.
+ .
+ This package contains the tidyit command and the tidyit-gui desktop app.
+EOF
+dpkg-deb --root-owner-group -Zxz --build "$deb" "dist/tidyit_${ver}_${arch}.deb" >/dev/null
+
+(cd dist && sha256sum -- * >SHA256SUMS)
+ls -l dist
