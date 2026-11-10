@@ -24,6 +24,7 @@ import (
 	"tidy/internal/checks/systemd"
 	"tidy/internal/config"
 	"tidy/internal/engine"
+	"tidy/internal/external"
 	"tidy/pkg/report"
 	"tidy/render/term"
 )
@@ -62,7 +63,9 @@ func main() {
 	}
 }
 
-func registry() *engine.Registry {
+// registry returns the built-in plugins followed by external ones, with
+// warnings for external plugins that could not be loaded.
+func registry() (*engine.Registry, []string) {
 	r := &engine.Registry{}
 	for _, p := range core.Plugins() {
 		r.Add(p)
@@ -74,7 +77,20 @@ func registry() *engine.Registry {
 	r.Add(network.Plugin())
 	r.Add(systemd.Plugin())
 	r.Add(bleachbit.Plugin())
-	return r
+
+	builtin := map[string]bool{}
+	for _, p := range r.Plugins() {
+		builtin[p.Manifest.ID] = true
+	}
+	ext, warnings := external.LoadAll(external.Dirs())
+	for _, p := range ext {
+		if builtin[p.Manifest.ID] {
+			warnings = append(warnings, fmt.Sprintf("plugin %s: id %q is a built-in plugin; skipping", p.Dir, p.Manifest.ID))
+			continue
+		}
+		r.Add(p)
+	}
+	return r, warnings
 }
 
 type runOpts struct {
@@ -112,8 +128,9 @@ func runCmd(args []string) error {
 	if err != nil {
 		return err
 	}
-	reg := registry()
-	insts, warnings := reg.Instances(cfg)
+	reg, warnings := registry()
+	insts, iw := reg.Instances(cfg)
+	warnings = append(warnings, iw...)
 	var patterns []string
 	if o.checks != "" {
 		patterns = strings.Split(o.checks, ",")
@@ -197,7 +214,9 @@ func checksCmd(args []string) error {
 	if err != nil {
 		return err
 	}
-	insts, warnings := registry().Instances(cfg)
+	reg, warnings := registry()
+	insts, iw := reg.Instances(cfg)
+	warnings = append(warnings, iw...)
 	if cfg.Path != "" {
 		fmt.Printf("config: %s\n\n", cfg.Path)
 	} else {
@@ -215,6 +234,9 @@ func checksCmd(args []string) error {
 			state += "  (config error: " + in.OptErr.Error() + ")"
 		}
 		fmt.Printf("%-34s %s  [%s via %s.%s]%s\n", in.ID, in.Title, in.Origin, in.Plugin.Manifest.ID, in.Spec.ID, state)
+		if *verbose && in.Plugin.Dir != "" {
+			fmt.Printf("    %-18s   %s\n", "(external plugin)", in.Plugin.Dir)
+		}
 		if !*verbose || in.OptErr != nil {
 			continue
 		}

@@ -1,0 +1,21 @@
+# Example external plugin: a laptop-report check ported to tidy's plugin
+# protocol. Install it with: ln -s "$PWD" ~/.local/share/tidy/plugins/
+id = "home-usage"
+name = "Home folder"
+version = "0.1.0"
+protocol = 1
+description = "Shows which folders in your home directory use the most space."
+requires = ["du", "sort"]
+
+[[checks]]
+id = "largest-folders"
+title = "Largest folders in home"
+description = "Informational: lists the biggest top-level folders, flags nothing."
+timeout = "120s"
+
+[checks.options.count]
+type = "integer"
+default = 10
+min = 1
+max = 50
+description = "How many folders to list"

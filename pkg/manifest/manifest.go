@@ -6,8 +6,10 @@ package manifest
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 // ProtocolVersion is the tidy <-> plugin contract version.
@@ -24,8 +26,61 @@ type Manifest struct {
 	NeedsRoot   bool     `toml:"needs_root" json:"needs_root,omitempty"`
 	// Lock names a group whose checks never run at the same time as each
 	// other, e.g. "dpkg" for anything that reads the dpkg database.
-	Lock   string      `toml:"lock" json:"lock,omitempty"`
-	Checks []CheckSpec `toml:"checks" json:"checks"`
+	Lock string `toml:"lock" json:"lock,omitempty"`
+	// Entrypoint is the executable an external plugin runs, relative to
+	// its folder. Defaults to "run". Unused by built-in plugins.
+	Entrypoint string      `toml:"entrypoint" json:"entrypoint,omitempty"`
+	Checks     []CheckSpec `toml:"checks" json:"checks"`
+}
+
+var idRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+
+// Validate reports the first problem that would stop the manifest from
+// working: a bad id, an unsupported protocol, duplicate checks, or options
+// whose type, default or limits don't fit.
+func (m *Manifest) Validate() error {
+	if !idRe.MatchString(m.ID) {
+		return fmt.Errorf("id %q must be lowercase letters, digits and dashes", m.ID)
+	}
+	if m.Protocol == 0 {
+		return fmt.Errorf("protocol is missing (add: protocol = %d)", ProtocolVersion)
+	}
+	if m.Protocol != ProtocolVersion {
+		return fmt.Errorf("protocol %d is not supported (this tidy speaks protocol %d)", m.Protocol, ProtocolVersion)
+	}
+	if len(m.Checks) == 0 {
+		return fmt.Errorf("declares no checks")
+	}
+	seen := map[string]bool{}
+	for i := range m.Checks {
+		c := &m.Checks[i]
+		if !idRe.MatchString(c.ID) {
+			return fmt.Errorf("check id %q must be lowercase letters, digits and dashes", c.ID)
+		}
+		if seen[c.ID] {
+			return fmt.Errorf("check %q is declared twice", c.ID)
+		}
+		seen[c.ID] = true
+		if c.Title == "" {
+			return fmt.Errorf("check %q has no title", c.ID)
+		}
+		if c.Timeout != "" {
+			if d, err := time.ParseDuration(c.Timeout); err != nil || d <= 0 {
+				return fmt.Errorf("check %q: timeout %q is not a duration like \"60s\"", c.ID, c.Timeout)
+			}
+		}
+		for name, o := range c.Options {
+			switch o.Type {
+			case TypeInteger, TypeNumber, TypeBoolean, TypeString, TypeStrings:
+			default:
+				return fmt.Errorf("check %q: option %q has unknown type %q", c.ID, name, o.Type)
+			}
+		}
+		if _, err := c.Resolve(); err != nil {
+			return fmt.Errorf("check %q: %w", c.ID, err)
+		}
+	}
+	return nil
 }
 
 // CheckSpec is one check a plugin provides.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime/debug"
 	"strings"
@@ -120,7 +121,7 @@ func (r Runner) runOne(ctx context.Context, in *Instance, probe func() error) (r
 		setErr(res, err)
 		return res
 	}
-	res.Items, res.Summary, res.Notes = out.Items, out.Summary, out.Notes
+	res.Items, res.Summary, res.Notes, res.Debug = out.Items, out.Summary, out.Notes, out.Debug
 	if len(out.Items) > 0 {
 		res.Status = report.StatusFlag
 		res.Hint = in.Hint
@@ -134,6 +135,10 @@ func (r Runner) runOne(ctx context.Context, in *Instance, probe func() error) (r
 }
 
 func setErr(res *report.Result, err error) {
+	var d *DebugError
+	if errors.As(err, &d) {
+		res.Debug = d.Debug
+	}
 	if s, ok := asSkip(err); ok {
 		res.Status, res.SkipReason = report.StatusSkipped, s.Reason
 		return
@@ -141,8 +146,12 @@ func setErr(res *report.Result, err error) {
 	res.Status, res.Error = report.StatusError, err.Error()
 }
 
-// probe checks a plugin's required binaries, then runs its own probe.
+// probe checks a plugin's required binaries and root, then runs its own
+// probe. tidy never elevates itself.
 func probe(ctx context.Context, p *Plugin) error {
+	if p.Manifest.NeedsRoot && os.Geteuid() != 0 {
+		return Skip("needs root (tidy does not use sudo; run it as root to include this)")
+	}
 	for _, bin := range p.Manifest.Requires {
 		if _, err := exec.LookPath(bin); err != nil {
 			return Skip("%s not installed", bin)

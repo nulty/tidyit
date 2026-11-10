@@ -24,6 +24,7 @@ type Outcome struct {
 	Summary string
 	Notes   []string
 	Hint    string // overrides the spec's hint when set
+	Debug   string // diagnostic output, shown only when verbose
 }
 
 // CheckFunc runs one check. It must stop promptly when ctx is cancelled.
@@ -47,6 +48,8 @@ type Plugin struct {
 	// Probe optionally checks the plugin can run at all (e.g. the docker
 	// daemon is reachable). Return Skip(...) to skip all its checks.
 	Probe func(ctx context.Context) error
+	// Dir is where an external plugin was loaded from; empty for built-ins.
+	Dir string
 }
 
 // SkipError marks a check, or a whole plugin, as not applicable here.
@@ -58,6 +61,16 @@ func (e *SkipError) Error() string { return "skipped: " + e.Reason }
 func Skip(format string, args ...any) error {
 	return &SkipError{Reason: fmt.Sprintf(format, args...)}
 }
+
+// DebugError is an error that carries diagnostic output (e.g. a plugin's
+// stderr) to keep in the result.
+type DebugError struct {
+	Err   error
+	Debug string
+}
+
+func (e *DebugError) Error() string { return e.Err.Error() }
+func (e *DebugError) Unwrap() error { return e.Err }
 
 func asSkip(err error) (*SkipError, bool) {
 	var s *SkipError

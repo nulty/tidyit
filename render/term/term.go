@@ -111,6 +111,9 @@ func renderResult(w io.Writer, r report.Result, c palette, opt Options) {
 			fmt.Fprintf(w, "      %s%s%s\n", c.dim, strings.ReplaceAll(n, "\n", "\n      "), c.rst)
 		}
 	}
+	if opt.Verbose && r.Debug != "" {
+		fmt.Fprintf(w, "      %sdebug:\n        %s%s\n", c.dim, strings.ReplaceAll(strings.TrimRight(r.Debug, "\n"), "\n", "\n        "), c.rst)
+	}
 	if r.Status == report.StatusFlag && r.Hint != "" {
 		fmt.Fprintf(w, "      %s%s%s\n", c.cyan, r.Hint, c.rst)
 	}

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# tidy plugin protocol 1: read the request on stdin, write JSON lines.
+set -euo pipefail
+
+req=$(cat)
+# Options arrive validated with defaults filled in, so a plain match is
+# enough here and the plugin needs no JSON parser.
+count=$(sed -n 's/.*"count":\([0-9]*\).*/\1/p' <<<"$req")
+count=${count:-10}
+
+# JSON string escaping for paths (backslash, quote, control characters).
+json_str() {
+  local s=$1
+  s=${s//\\/\\\\}; s=${s//\"/\\\"}
+  s=${s//$'\t'/\\t}; s=${s//$'\r'/\\r}; s=${s//$'\n'/\\n}
+  printf '"%s"' "$s"
+}
+
+human() { numfmt --to=iec --suffix= "$1" 2>/dev/null || echo "$1"; }
+
+# -x: stay on this filesystem; sizes in bytes so they can be sorted.
+lines=$(du -x -B1 --max-depth=1 "$HOME" 2>/dev/null | sort -rn) || true
+total=$(head -n1 <<<"$lines" | cut -f1)
+if [ -z "$total" ]; then
+  echo '{"type":"skip","reason":"could not measure the home folder"}'
+  exit 0
+fi
+
+printf '{"type":"summary","text":%s}\n' "$(json_str "~ uses $(human "$total")")"
+tail -n +2 <<<"$lines" | head -n "$count" | while IFS=$'\t' read -r bytes path; do
+  printf '{"type":"note","text":%s}\n' "$(json_str "$(printf '%6s  %s' "$(human "$bytes")" "~${path#"$HOME"}")")"
+done

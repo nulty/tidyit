@@ -57,6 +57,7 @@ type Result struct {
 	Summary    string        `json:"summary,omitempty"`
 	Items      []Item        `json:"items,omitempty"`
 	Notes      []string      `json:"notes,omitempty"` // informational lines
+	Debug      string        `json:"debug,omitempty"` // diagnostic output, e.g. a plugin's stderr
 	Hint       string        `json:"hint,omitempty"`
 	SkipReason string        `json:"skip_reason,omitempty"`
 	Error      string        `json:"error,omitempty"`
