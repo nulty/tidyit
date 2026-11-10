@@ -2,7 +2,10 @@ package snap
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -120,5 +123,42 @@ func TestFindNeverOpened(t *testing.T) {
 	want := map[string][]string{"okular": {"lxqt-support-core24"}, "lonely-app": nil}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("got %v, want %v", got, want)
+	}
+}
+
+func TestAccountSnapDirs(t *testing.T) {
+	dir := t.TempDir()
+	mk := func(p string, mode os.FileMode) {
+		if err := os.MkdirAll(p, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chmod(p, mode); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk(filepath.Join(dir, "alice", "snap", "okular"), 0o755)
+	mk(filepath.Join(dir, "bob"), 0o755) // never ran a snap
+	mk(filepath.Join(dir, "carol"), 0o000)
+	t.Cleanup(func() { os.Chmod(filepath.Join(dir, "carol"), 0o755) })
+	passwd := filepath.Join(dir, "passwd")
+	lines := []string{
+		"root:x:0:0:root:" + filepath.Join(dir, "carol") + ":/bin/bash",     // root is never counted
+		"ghost:x:1004:1004::" + filepath.Join(dir, "nohome") + ":/bin/bash", // no home folder
+		"daemon:x:1:1::/usr/sbin:/usr/sbin/nologin",
+		"alice:x:1000:1000::" + filepath.Join(dir, "alice") + ":/bin/bash",
+		"bob:x:1001:1001::" + filepath.Join(dir, "bob") + ":/bin/zsh",
+		"carol:x:1002:1002::" + filepath.Join(dir, "carol") + ":/bin/bash",
+		"svc:x:1003:1003::" + filepath.Join(dir, "alice") + ":/usr/bin/false",
+		"nobody:x:65534:65534::/nonexistent:/usr/sbin/nologin",
+	}
+	if err := os.WriteFile(passwd, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	readable, private := accountSnapDirs(passwd)
+	if len(readable) != 2 || !strings.HasSuffix(readable[0], "alice/snap") || !strings.HasSuffix(readable[1], "bob/snap") {
+		t.Fatalf("readable %v", readable)
+	}
+	if os.Geteuid() != 0 && !reflect.DeepEqual(private, []string{"carol"}) {
+		t.Fatalf("private %v", private)
 	}
 }

@@ -39,7 +39,7 @@ func Plugin() *engine.Plugin {
 			}, {
 				ID:          "never-opened",
 				Title:       "Snap apps never opened",
-				Description: "App snaps you have never run (snapd creates ~/snap/<name> on first run), with the runtimes only they need. Snaps that run system services are left out.",
+				Description: "App snaps no account has ever run (snapd creates ~/snap/<name> on first run), with the runtimes only they need. Snaps that run system services are left out. Skipped when other accounts' home folders can't be read.",
 				Hint:        "the command also removes the runtimes only that app needs; open the app first if unsure what it is",
 			}},
 		},
