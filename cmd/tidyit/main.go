@@ -20,6 +20,7 @@ import (
 	"tidyit/internal/app"
 	"tidyit/internal/config"
 	"tidyit/internal/engine"
+	"tidyit/internal/version"
 	"tidyit/pkg/report"
 	"tidyit/render/htmlreport"
 	"tidyit/render/term"
@@ -31,6 +32,7 @@ const usage = `tidyit: report stale things on this machine (read-only)
 Usage:
   tidyit [run] [flags]     run checks and print a report
   tidyit checks [-v]       list checks, their options and where settings come from
+  tidyit version           print the version
 
 Run flags:
 `
@@ -42,7 +44,12 @@ func main() {
 		cmd, args = args[0], args[1:]
 	}
 	var err error
+	if len(args) > 0 && (args[0] == "--version" || args[0] == "-version") {
+		cmd = "version"
+	}
 	switch cmd {
+	case "version":
+		fmt.Println(version.Generator())
 	case "run":
 		err = runCmd(args)
 	case "checks":
@@ -114,6 +121,7 @@ func runCmd(args []string) error {
 	progress := newProgress(os.Stderr, app.Enabled(insts), !o.json && isTerminal(os.Stderr))
 	started := time.Now()
 	rep := engine.Collect(runner.Run(ctx, insts), host, progress.event)
+	rep.Generator = version.Generator()
 	rep.StartedAt = started
 	progress.done()
 	app.SortResults(rep, insts)

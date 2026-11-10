@@ -17,6 +17,7 @@ It replaces the old `laptop-report` bash script (see git history).
     tidyit --json         # machine-readable report
     tidyit --html r.html  # self-contained HTML report to keep or share
     tidyit checks -v      # list checks and their options
+    tidyit version        # print the version
 
 Settings go in `~/.config/tidyit/config.toml` (overrides only; see
 `internal/config/config.go` for the format).

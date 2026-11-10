@@ -92,6 +92,7 @@ type Event struct {
 // Report is a whole run, collected from its events.
 type Report struct {
 	SchemaVersion int       `json:"schema_version"`
+	Generator     string    `json:"generator,omitempty"` // the program and version that ran, e.g. "tidyit v0.1.0-beta.1"
 	Host          string    `json:"host"`
 	StartedAt     time.Time `json:"started_at"`
 	FinishedAt    time.Time `json:"finished_at"`

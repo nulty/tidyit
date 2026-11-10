@@ -19,6 +19,7 @@ import (
 	"tidyit/internal/app"
 	"tidyit/internal/config"
 	"tidyit/internal/engine"
+	"tidyit/internal/version"
 	"tidyit/pkg/report"
 	"tidyit/render/htmlreport"
 	"tidyit/render/view"
@@ -128,6 +129,9 @@ func newWindow(a *adw.Application) *window {
 	w.rescan = gio.NewSimpleAction("rescan", nil)
 	w.rescan.ConnectActivate(func(*glib.Variant) { w.run() })
 	w.AddAction(w.rescan)
+	about := gio.NewSimpleAction("about", nil)
+	about.ConnectActivate(func(*glib.Variant) { w.showAbout() })
+	w.AddAction(about)
 	w.save = gio.NewSimpleAction("save", nil)
 	w.save.ConnectActivate(func(*glib.Variant) { w.saveReport() })
 	w.AddAction(w.save)
@@ -186,6 +190,7 @@ func (w *window) run() {
 			glib.IdleAdd(func() { w.showProgress(n, total, names) })
 		})
 		rep.StartedAt = started
+		rep.Generator = version.Generator()
 		app.SortResults(rep, insts)
 		res := newFinished(rep, app.Groups(rep, reg), warnings)
 		glib.IdleAdd(func() {
@@ -222,6 +227,7 @@ func (w *window) buildSplit() *adw.NavigationSplitView {
 
 	menu := gio.NewMenu()
 	menu.Append("Save Report as HTML…", "win.save")
+	menu.Append("About Tidy It", "win.about")
 	menuButton := gtk.NewMenuButton()
 	menuButton.SetIconName("open-menu-symbolic")
 	menuButton.SetTooltipText("Main Menu")
@@ -396,6 +402,15 @@ func (w *window) saveReport() {
 		}
 		w.toast("Report saved")
 	})
+}
+
+func (w *window) showAbout() {
+	d := adw.NewAboutDialog()
+	d.SetApplicationName("Tidy It")
+	d.SetApplicationIcon("edit-clear-all-symbolic")
+	d.SetVersion(version.String())
+	d.SetComments("Finds stale things on this machine that cleaners miss, and shows the command to remove each one. It never runs them.")
+	d.Present(w)
 }
 
 // isDismissed reports whether err is the user cancelling a dialog.

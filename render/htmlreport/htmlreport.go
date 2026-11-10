@@ -52,6 +52,7 @@ type quiet struct {
 
 type data struct {
 	Host, Date, Duration string
+	Generator            string
 	Headlines            []string
 	Safe, Review         string
 	Checks               []check
@@ -69,11 +70,15 @@ func Render(w io.Writer, rep *report.Report, groups []view.Group, opt Options) e
 	}
 	d := data{
 		Host:       rep.Host,
+		Generator:  rep.Generator,
 		Date:       rep.StartedAt.Format("2006-01-02 15:04"),
 		Duration:   rep.FinishedAt.Sub(rep.StartedAt).Round(100_000_000).String(),
 		Headlines:  o.Headlines,
 		ConfCounts: map[string]int{},
 		JSON:       template.JS(raw),
+	}
+	if d.Generator == "" {
+		d.Generator = "tidyit"
 	}
 	if o.Safe > 0 {
 		d.Safe = fsx.Human(o.Safe)
