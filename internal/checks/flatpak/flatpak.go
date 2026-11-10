@@ -27,7 +27,7 @@ func Plugin() *engine.Plugin {
 			Requires: []string{"flatpak"},
 			Checks: []manifest.CheckSpec{{
 				ID:    "unused-runtimes",
-				Title: "Runtimes no app uses",
+				Title: "Unused Flatpak runtimes",
 				Hint:  "flatpak uninstall --unused shows its own list and asks before removing (pinned runtimes are kept)",
 			}},
 		},
@@ -177,7 +177,7 @@ func unusedRuntimes(ctx context.Context, _ engine.Input) (engine.Outcome, error)
 		})
 	}
 	if n := len(out.Items); n > 0 {
-		out.Summary = fmt.Sprintf("%d runtimes (tidy's estimate; compare with flatpak's list before removing)", n)
+		out.Summary = fmt.Sprintf("tidy's estimate of %d; compare with flatpak's own list before removing", n)
 	}
 	return out, nil
 }

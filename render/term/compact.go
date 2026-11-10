@@ -13,7 +13,7 @@ import (
 
 const (
 	previewItems = 3  // items named on a compact row
-	maxTitle     = 34 // title column width cap
+	maxTitle     = 28 // title column width cap
 )
 
 // renderCompact writes one line per flagged check, biggest first, then the

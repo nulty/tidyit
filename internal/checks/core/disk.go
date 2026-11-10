@@ -30,7 +30,7 @@ func Disk() *engine.Plugin {
 			ID: "disk", Name: "Disk", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
 			Checks: []manifest.CheckSpec{{
 				ID:    "usage",
-				Title: "Filesystem usage",
+				Title: "Disk usage",
 				Hint:  "see what is using the space in the sections below, or run: du -h --max-depth=1 <mount> | sort -rh",
 				Options: map[string]manifest.Option{
 					"warn_percent": {Type: manifest.TypeInteger, Default: 85, Min: manifest.Ptr(1), Max: manifest.Ptr(100),
@@ -71,14 +71,14 @@ func diskUsage(_ context.Context, in engine.Input) (engine.Outcome, error) {
 		out.Notes = append(out.Notes, line)
 		if pct >= warn {
 			out.Items = append(out.Items, report.Item{
-				ID: m.dir, Label: m.dir, Path: m.dir, Size: int64(used),
+				ID: m.dir, Label: m.dir, Path: m.dir, // no Size: nothing here is removable as such
 				Detail:     fmt.Sprintf("%d%% full, %s free", pct, fsx.Human(int64(avail))),
 				Confidence: report.ConfidenceManual,
 			})
 		}
 	}
 	if len(out.Items) > 0 {
-		out.Summary = fmt.Sprintf("%d filesystem(s) at or above %d%%", len(out.Items), warn)
+		out.Summary = fmt.Sprintf("at or above %d%% full", warn)
 	}
 	return out, nil
 }

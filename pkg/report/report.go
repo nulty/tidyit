@@ -41,7 +41,7 @@ type Item struct {
 	ID         string     `json:"id"`             // stable within its check
 	Label      string     `json:"label"`          // what a person reads
 	Path       string     `json:"path,omitempty"` // filesystem path, if any
-	Size       int64      `json:"size,omitempty"` // bytes, 0 if unknown
+	Size       int64      `json:"size,omitempty"` // bytes removing it would free, 0 if unknown or not applicable
 	Detail     string     `json:"detail,omitempty"`
 	Confidence Confidence `json:"confidence"`
 	Action     *Action    `json:"action,omitempty"`

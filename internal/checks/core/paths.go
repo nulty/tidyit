@@ -62,7 +62,7 @@ func Paths() *engine.Plugin {
 					"paths": []string{"~/.cache"}, "min_size_mb": 200, "confidence": "safe"}},
 			{ID: "tmp", Check: "scan", Title: "Old temporary files", Options: map[string]any{
 				"paths": []string{"/tmp", "/var/tmp"}, "min_age_days": 7, "owned_by_me": true, "confidence": "safe"}},
-			{ID: "stale-app-config", Check: "scan", Title: "App data untouched for a year",
+			{ID: "stale-app-config", Check: "scan", Title: "App data unused for a year",
 				Hint: "a folder here may belong to an app you removed; check before deleting",
 				Options: map[string]any{
 					"paths": []string{"~/.config", "~/.local/share"}, "type": "dir", "min_age_days": 365,
@@ -124,15 +124,10 @@ func pathScan(ctx context.Context, in engine.Input) (engine.Outcome, error) {
 	}
 
 	sort.Slice(all, func(i, j int) bool { return all[i].size > all[j].size })
-	var total int64
-	for _, f := range all {
-		total += f.size
-	}
 	out := engine.Outcome{Notes: notes}
 	if len(all) == 0 {
 		return out, nil
 	}
-	out.Summary = fmt.Sprintf("%d found, %s", len(all), fsx.Human(total))
 	conf := report.Confidence(o.String("confidence"))
 	for _, f := range all {
 		out.Items = append(out.Items, report.Item{

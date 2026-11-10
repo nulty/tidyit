@@ -85,8 +85,11 @@ func renderFull(w io.Writer, rep *report.Report, groups []Group, opt Options) {
 	if n := counts[report.StatusError]; n > 0 {
 		fmt.Fprintf(w, " · %s%d errors%s", c.red, n, c.rst)
 	}
-	if safe := report.SafeTotal(all); safe > 0 {
-		fmt.Fprintf(w, " · up to %s%s%s marked safe to remove", c.grn, fsx.Human(safe), c.rst)
+	if n := report.Total(all, report.ConfidenceSafe); n > 0 {
+		fmt.Fprintf(w, "  ·  %s%s safe to remove%s", c.grn, fsx.Human(n), c.rst)
+	}
+	if n := report.Total(all, report.ConfidenceReview); n > 0 {
+		fmt.Fprintf(w, " · %s to review", fsx.Human(n))
 	}
 	fmt.Fprintln(w)
 }
@@ -108,9 +111,19 @@ func renderResult(w io.Writer, r report.Result, c palette, opt Options) {
 	case report.StatusError:
 		fmt.Fprintf(w, "  %sERR%s %s: %s%s\n", c.red, c.rst, r.Title, r.Error, dur)
 	case report.StatusFlag:
-		line := r.Title
+		facts := []string{fmt.Sprintf("%d found", len(r.Items))}
+		if n := r.TotalSize(); n > 0 {
+			facts = append(facts, fsx.Human(n))
+		}
 		if r.Summary != "" {
-			line += ": " + r.Summary
+			facts = append(facts, r.Summary)
+		}
+		// One tag on the heading when every item shares it; otherwise a
+		// tag per item.
+		shared := sharedConfidence(r.Items)
+		line := r.Title + "  " + c.dim + strings.Join(facts, " · ") + c.rst
+		if shared != "" {
+			line += "  " + tag(shared, c)
 		}
 		fmt.Fprintf(w, "  %s!!%s  %s%s\n", c.yel, c.rst, line, dur)
 		items := r.Items
@@ -126,7 +139,11 @@ func renderResult(w io.Writer, r report.Result, c palette, opt Options) {
 			if it.Detail != "" {
 				detail = "  " + c.dim + it.Detail + c.rst
 			}
-			fmt.Fprintf(w, "      %6s  %s%s  %s\n", size, it.Label, detail, tag(it.Confidence, c))
+			itemTag := ""
+			if shared == "" {
+				itemTag = "  " + tag(it.Confidence, c)
+			}
+			fmt.Fprintf(w, "      %6s  %s%s%s\n", size, it.Label, detail, itemTag)
 			if it.Action != nil && it.Action.Command != "" {
 				fmt.Fprintf(w, "              %s$ %s%s\n", c.dim, it.Action.Command, c.rst)
 			}
@@ -168,4 +185,19 @@ func tag(conf report.Confidence, c palette) string {
 		return c.dim + "[manual]" + c.rst
 	}
 	return ""
+}
+
+// sharedConfidence returns the items' confidence if they all have the
+// same one, else "".
+func sharedConfidence(items []report.Item) report.Confidence {
+	if len(items) == 0 {
+		return ""
+	}
+	c := items[0].Confidence
+	for _, it := range items[1:] {
+		if it.Confidence != c {
+			return ""
+		}
+	}
+	return c
 }

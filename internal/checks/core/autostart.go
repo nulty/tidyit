@@ -88,7 +88,7 @@ func autostartBroken(_ context.Context, in engine.Input) (engine.Outcome, error)
 		out.Notes = append(out.Notes, "your login items: "+strings.Join(userItems, ", "))
 	}
 	if len(out.Items) > 0 {
-		out.Summary = fmt.Sprintf("%d start a program that is not installed", len(out.Items))
+		out.Summary = "they start programs that are not installed"
 	}
 	return out, nil
 }

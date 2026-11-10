@@ -133,8 +133,5 @@ func staleConnections(ctx context.Context, in engine.Input) (engine.Outcome, err
 	}
 	cutoff := time.Now().AddDate(0, 0, -in.Options.Int("unused_days"))
 	out := engine.Outcome{Items: stale(parseConnections(raw), cutoff)}
-	if n := len(out.Items); n > 0 {
-		out.Summary = fmt.Sprintf("%d connections", n)
-	}
 	return out, nil
 }

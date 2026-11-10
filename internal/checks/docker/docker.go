@@ -29,7 +29,7 @@ func Plugin() *engine.Plugin {
 			Checks: []manifest.CheckSpec{
 				{
 					ID:    "unused-images",
-					Title: "Images not used by any container",
+					Title: "Unused Docker images",
 					Hint:  "remove one: docker image rm <id>   all unused: docker image prune -a",
 					Options: map[string]manifest.Option{
 						"min_age_days": {Type: manifest.TypeInteger, Default: 0, Min: manifest.Ptr(0),
@@ -40,12 +40,12 @@ func Plugin() *engine.Plugin {
 				},
 				{
 					ID:    "unused-networks",
-					Title: "Networks with no containers",
+					Title: "Unused Docker networks",
 					Hint:  "docker network prune",
 				},
 				{
 					ID:    "unattached-volumes",
-					Title: "Volumes not used by any container",
+					Title: "Unused Docker volumes",
 					Hint:  "volumes can hold data, check first: docker volume inspect <name>",
 					Options: map[string]manifest.Option{
 						"include_anonymous": {Type: manifest.TypeBoolean, Default: true,
@@ -205,7 +205,7 @@ func unusedImages(ctx context.Context, in engine.Input) (engine.Outcome, error) 
 	}
 	sort.SliceStable(out.Items, func(i, j int) bool { return out.Items[i].Size > out.Items[j].Size })
 	if n := len(out.Items); n > 0 {
-		out.Summary = fmt.Sprintf("%d images, about %s (layers shared with other images are counted once per image)", n, fsx.Human(total))
+		out.Summary = "shared layers counted once per image, so an upper estimate"
 	}
 	return out, nil
 }
@@ -254,9 +254,6 @@ func unusedNetworks(ctx context.Context, _ engine.Input) (engine.Outcome, error)
 		}
 		out.Items = append(out.Items, it)
 	}
-	if n := len(out.Items); n > 0 {
-		out.Summary = fmt.Sprintf("%d networks", n)
-	}
 	return out, nil
 }
 
@@ -293,7 +290,9 @@ func unattachedVolumes(ctx context.Context, in engine.Input) (engine.Outcome, er
 		out.Items = append(out.Items, it)
 	}
 	if n := len(out.Items); n > 0 {
-		out.Summary = fmt.Sprintf("%d volumes (%d anonymous)", n, anon)
+		if anon > 0 {
+			out.Summary = fmt.Sprintf("%d anonymous", anon)
+		}
 	}
 	return out, nil
 }

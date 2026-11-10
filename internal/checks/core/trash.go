@@ -50,7 +50,6 @@ func trashSize(ctx context.Context, in engine.Input) (engine.Outcome, error) {
 		return engine.Outcome{Summary: desc}, nil
 	}
 	return engine.Outcome{
-		Summary: desc,
 		Items: []report.Item{{
 			ID: "trash", Label: fmt.Sprintf("Trash (%d items)", len(ents)), Path: dir, Size: st.Size,
 			Confidence: report.ConfidenceSafe,

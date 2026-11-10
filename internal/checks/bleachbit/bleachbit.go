@@ -97,7 +97,7 @@ func preview(ctx context.Context, in engine.Input) (engine.Outcome, error) {
 	if sum.files == 0 && sum.special == 0 {
 		return out, nil
 	}
-	out.Summary = fmt.Sprintf("%s in %d files", fsx.Human(sum.size), sum.files)
+	out.Summary = fmt.Sprintf("%d files", sum.files)
 	if sum.special > 0 {
 		out.Summary += fmt.Sprintf(", plus %d database cleanups", sum.special)
 	}

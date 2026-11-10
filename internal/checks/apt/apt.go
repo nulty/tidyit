@@ -6,14 +6,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
 	"tidy/internal/engine"
 	"tidy/internal/execx"
-	"tidy/internal/fsx"
 	"tidy/pkg/manifest"
 	"tidy/pkg/report"
 )
@@ -28,13 +26,13 @@ func Plugin() *engine.Plugin {
 			Checks: []manifest.CheckSpec{
 				{
 					ID:          "autoremove",
-					Title:       "Packages no longer needed",
+					Title:       "Unneeded packages",
 					Description: "Installed automatically as dependencies of packages that are gone.",
 					Hint:        "sudo apt autoremove --purge",
 				},
 				{
 					ID:          "leftover-config",
-					Title:       "Configs left by removed packages",
+					Title:       "Leftover package configs",
 					Description: "Packages removed without --purge keep their files in /etc.",
 					Hint:        "sudo apt purge $(dpkg-query -W -f '${db:Status-Abbrev} ${binary:Package}\\n' | awk '/^rc/{print $2}')",
 				},
@@ -116,17 +114,15 @@ func autoremove(ctx context.Context, _ engine.Input) (engine.Outcome, error) {
 		return engine.Outcome{}, err
 	}
 	var out engine.Outcome
-	var total int64
 	for _, p := range pkgs {
 		size := sizeOf(sizes, p)
-		total += size
 		out.Items = append(out.Items, report.Item{
 			ID: p, Label: p, Size: size, Confidence: report.ConfidenceSafe,
 			Action: &report.Action{Command: "sudo apt-get purge " + p, NeedsRoot: true},
 		})
 	}
 	sort.SliceStable(out.Items, func(i, j int) bool { return out.Items[i].Size > out.Items[j].Size })
-	out.Summary = fmt.Sprintf("%d packages, %s installed size", len(pkgs), fsx.Human(total))
+	out.Summary = "sizes are installed sizes"
 	return out, nil
 }
 
@@ -148,9 +144,6 @@ func leftoverConfig(ctx context.Context, _ engine.Input) (engine.Outcome, error)
 			ID: p, Label: p, Confidence: report.ConfidenceSafe,
 			Action: &report.Action{Command: "sudo apt-get purge " + p, NeedsRoot: true},
 		})
-	}
-	if n := len(pkgs); n > 0 {
-		out.Summary = fmt.Sprintf("%d packages", n)
 	}
 	return out, nil
 }

@@ -14,7 +14,6 @@ import (
 
 	"tidy/internal/engine"
 	"tidy/internal/execx"
-	"tidy/internal/fsx"
 	"tidy/pkg/manifest"
 	"tidy/pkg/report"
 )
@@ -29,7 +28,7 @@ func Plugin() *engine.Plugin {
 			Requires: []string{"snap"},
 			Checks: []manifest.CheckSpec{{
 				ID:          "old-revisions",
-				Title:       "Old (disabled) snap revisions",
+				Title:       "Old snap revisions",
 				Description: "snapd keeps previous revisions of each snap so it can roll back.",
 				Hint:        "keep fewer in future: sudo snap set system refresh.retain=2",
 			}},
@@ -71,7 +70,6 @@ func oldRevisions(ctx context.Context, _ engine.Input) (engine.Outcome, error) {
 		return engine.Outcome{}, err
 	}
 	var out engine.Outcome
-	var total int64
 	for _, r := range parseDisabled(raw) {
 		path := filepath.Join(snapsDir, r.name+"_"+r.rev+".snap")
 		var size int64
@@ -80,7 +78,6 @@ func oldRevisions(ctx context.Context, _ engine.Input) (engine.Outcome, error) {
 				size = st.Blocks * 512
 			}
 		}
-		total += size
 		out.Items = append(out.Items, report.Item{
 			ID: r.name + "_" + r.rev, Label: r.name, Detail: "revision " + r.rev,
 			Path: path, Size: size, Confidence: report.ConfidenceSafe,
@@ -88,8 +85,5 @@ func oldRevisions(ctx context.Context, _ engine.Input) (engine.Outcome, error) {
 		})
 	}
 	sort.SliceStable(out.Items, func(i, j int) bool { return out.Items[i].Size > out.Items[j].Size })
-	if n := len(out.Items); n > 0 {
-		out.Summary = fmt.Sprintf("%d revisions, %s", n, fsx.Human(total))
-	}
 	return out, nil
 }

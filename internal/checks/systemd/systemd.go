@@ -26,12 +26,12 @@ func Plugin() *engine.Plugin {
 			Checks: []manifest.CheckSpec{
 				{
 					ID:    "failed-units",
-					Title: "Failed units",
+					Title: "Failed systemd units",
 					Hint:  "details: systemctl [--user] status <unit>   clear once fixed: systemctl [--user] reset-failed <unit>",
 				},
 				{
 					ID:    "journal-size",
-					Title: "Journal size",
+					Title: "Systemd journal size",
 					Hint:  "trim: sudo journalctl --vacuum-time=4weeks   cap it: SystemMaxUse= in /etc/systemd/journald.conf",
 					Options: map[string]manifest.Option{
 						"warn_mb": {Type: manifest.TypeInteger, Default: 1024, Min: manifest.Ptr(1),
@@ -102,7 +102,7 @@ func failedUnits(ctx context.Context, _ engine.Input) (engine.Outcome, error) {
 			})
 		}
 	}
-	if len(out.Items) > 0 {
+	if nUser > 0 {
 		out.Summary = fmt.Sprintf("%d system, %d user", nSys, nUser)
 	}
 	return out, nil
