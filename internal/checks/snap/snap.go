@@ -31,9 +31,14 @@ func Plugin() *engine.Plugin {
 				Title:       "Old snap revisions",
 				Description: "snapd keeps previous revisions of each snap so it can roll back.",
 				Hint:        "keep fewer in future: sudo snap set system refresh.retain=2",
+			}, {
+				ID:          "unused-support",
+				Title:       "Unused snap runtimes",
+				Description: "Bases and content snaps (shared libraries, themes) that no installed snap uses, usually left behind when an app was removed.",
+				Hint:        "check first: snap connections <name>",
 			}},
 		},
-		Checks: map[string]engine.CheckFunc{"old-revisions": oldRevisions},
+		Checks: map[string]engine.CheckFunc{"old-revisions": oldRevisions, "unused-support": unusedSupport},
 	}
 }
 
