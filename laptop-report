@@ -1,0 +1,207 @@
+#!/usr/bin/env bash
+# laptop-report: list stale things BleachBit does not clean.
+# Read-only. It never deletes or changes anything, and it does not need sudo.
+
+set -u
+
+if [ -t 1 ]; then
+  BOLD=$'\e[1m'; DIM=$'\e[2m'; YEL=$'\e[33m'; GRN=$'\e[32m'; RST=$'\e[0m'
+else
+  BOLD=""; DIM=""; YEL=""; GRN=""; RST=""
+fi
+
+section() { printf '\n%s== %s ==%s\n' "$BOLD" "$1" "$RST"; }
+ok()      { printf '  %sOK%s  %s\n' "$GRN" "$RST" "$1"; }
+flag()    { printf '  %s!!%s  %s\n' "$YEL" "$RST" "$1"; }
+hint()    { printf '      %s%s%s\n' "$DIM" "$1" "$RST"; }
+have()    { command -v "$1" >/dev/null 2>&1; }
+
+printf '%sLaptop report%s  %s\n' "$BOLD" "$RST" "$(date '+%Y-%m-%d %H:%M')"
+
+# ---------------------------------------------------------------- disk
+section "Disk"
+df -h --output=target,size,used,avail,pcent / /home 2>/dev/null | awk '!seen[$0]++'
+
+# ---------------------------------------------------------------- docker
+section "Docker"
+if have docker && docker info >/dev/null 2>&1; then
+  docker system df
+
+  used_images=$(docker ps -a --format '{{.Image}}' | sort -u)
+  unused=$(docker images --format '{{.Repository}}:{{.Tag}} {{.ID}} {{.Size}}' \
+    | while read -r ref id size; do
+        if ! grep -qxF "$ref" <<<"$used_images" && ! grep -qxF "$id" <<<"$used_images"; then
+          printf '%s (%s)\n' "$ref" "$size"
+        fi
+      done)
+  if [ -n "$unused" ]; then
+    flag "Images not used by any container:"
+    sed 's/^/        /' <<<"$unused"
+    hint "remove one: docker image rm <name>   all: docker image prune -a"
+  else
+    ok "Every image is used by a container"
+  fi
+
+  unused_nets=$(docker network ls --format '{{.Name}}' \
+    | grep -vxE 'bridge|host|none' \
+    | while read -r net; do
+        [ -z "$(docker network inspect -f '{{len .Containers}}' "$net" | grep -v '^0$')" ] \
+          && [ -z "$(docker ps -a -q --filter "network=$net")" ] && echo "$net"
+      done)
+  if [ -n "$unused_nets" ]; then
+    flag "Networks with no containers:"
+    sed 's/^/        /' <<<"$unused_nets"
+    hint "docker network prune"
+  else
+    ok "No unused networks"
+  fi
+
+  dangling_vols=$(docker volume ls -q --filter dangling=true)
+  if [ -n "$dangling_vols" ]; then
+    flag "Volumes not attached to any container (these can hold data, check first):"
+    sed 's/^/        /' <<<"$dangling_vols"
+  else
+    ok "No unattached volumes"
+  fi
+else
+  hint "docker not installed or not reachable, skipped"
+fi
+
+# ---------------------------------------------------------------- snap
+section "Snap"
+if have snap; then
+  disabled=$(snap list --all 2>/dev/null | awk '/disabled/{print $1, $3}')
+  if [ -n "$disabled" ]; then
+    total=0
+    flag "Old (disabled) snap revisions:"
+    while read -r name rev; do
+      f="/var/lib/snapd/snaps/${name}_${rev}.snap"
+      bytes=$(stat -c %s "$f" 2>/dev/null || echo 0)
+      total=$((total + bytes))
+      printf '        %-32s rev %-6s %s\n' "$name" "$rev" "$(numfmt --to=iec "$bytes")"
+    done <<<"$disabled"
+    hint "total $(numfmt --to=iec "$total")   remove one: sudo snap remove <name> --revision=<rev>"
+    hint "keep fewer in future: sudo snap set system refresh.retain=2"
+  else
+    ok "No old snap revisions"
+  fi
+else
+  hint "snap not installed, skipped"
+fi
+
+# ---------------------------------------------------------------- flatpak
+if have flatpak; then
+  section "Flatpak"
+  unused_rt=$(flatpak uninstall --unused --assumeno 2>/dev/null | awk 'NF && $1 ~ /^[0-9]+\.$/ {print $2}')
+  if [ -n "$unused_rt" ]; then
+    flag "Unused runtimes:"
+    sed 's/^/        /' <<<"$unused_rt"
+    hint "flatpak uninstall --unused"
+  else
+    ok "No unused runtimes"
+  fi
+fi
+
+# ---------------------------------------------------------------- apt
+section "APT"
+autoremove=$(apt-get -s autoremove 2>/dev/null | awk '/^Remv/{print $2}')
+if [ -n "$autoremove" ]; then
+  flag "$(wc -l <<<"$autoremove") packages no longer needed:"
+  sed 's/^/        /' <<<"$autoremove" | column -c 100
+  hint "sudo apt autoremove --purge"
+else
+  ok "Nothing to autoremove"
+fi
+
+rc=$(dpkg -l 2>/dev/null | awk '/^rc/{print $2}')
+if [ -n "$rc" ]; then
+  flag "$(wc -l <<<"$rc") removed packages left config files behind:"
+  sed 's/^/        /' <<<"$rc" | column -c 100
+  hint "sudo apt purge \$(dpkg -l | awk '/^rc/{print \$2}')"
+else
+  ok "No leftover package configs"
+fi
+
+# ---------------------------------------------------------------- network
+section "NetworkManager connections"
+if have nmcli; then
+  stale=0
+  while IFS=: read -r name type device auto ts; do
+    name=${name//\\:/:}
+    case "$type" in loopback) continue ;; esac
+    if [ "$type" = bridge ] && [ -z "$device" ]; then
+      flag "Bridge with no device (likely a deleted Docker network): $name"
+      stale=1
+    elif [ "$auto" = yes ] && [ "$ts" = 0 ]; then
+      flag "Autoconnect on but has never connected: $name ($type)"
+      stale=1
+    fi
+  done < <(nmcli -t -f NAME,TYPE,DEVICE,AUTOCONNECT,TIMESTAMP connection show 2>/dev/null)
+
+  # Wi-Fi networks not used in over a year
+  cutoff=$(( $(date +%s) - 365*24*3600 ))
+  while IFS=: read -r name type ts; do
+    if [ "$type" = 802-11-wireless ] && [ "$ts" != 0 ] && [ "$ts" -lt "$cutoff" ]; then
+      flag "Wi-Fi not used since $(date -d "@$ts" +%Y-%m-%d): ${name//\\:/:}"
+      stale=1
+    fi
+  done < <(nmcli -t -f NAME,TYPE,TIMESTAMP connection show 2>/dev/null)
+
+  [ "$stale" = 0 ] && ok "No stale connections"
+  [ "$stale" = 1 ] && hint "manage in Advanced Network Configuration, or: nmcli connection delete <name>"
+fi
+
+# ---------------------------------------------------------------- services
+section "Services"
+failed_sys=$(systemctl --failed --no-legend --plain 2>/dev/null | awk '{print $1}')
+failed_usr=$(systemctl --user --failed --no-legend --plain 2>/dev/null | awk '{print $1}')
+if [ -n "$failed_sys$failed_usr" ]; then
+  [ -n "$failed_sys" ] && { flag "Failed system units:"; sed 's/^/        /' <<<"$failed_sys"; }
+  [ -n "$failed_usr" ] && { flag "Failed user units:";   sed 's/^/        /' <<<"$failed_usr"; }
+  hint "details: systemctl status <unit>"
+else
+  ok "No failed units"
+fi
+
+# ---------------------------------------------------------------- autostart
+section "Autostart"
+broken=0
+for f in "$HOME"/.config/autostart/*.desktop; do
+  [ -e "$f" ] || continue
+  grep -qi '^Hidden=true' "$f" && continue
+  cmd=$(grep -m1 '^Exec=' "$f" | sed 's/^Exec=//; s/^env [^ ]*=[^ ]* //' | awk '{print $1}')
+  if [ -n "$cmd" ] && ! have "$cmd" && [ ! -x "$cmd" ]; then
+    flag "$(basename "$f") starts a program that is not installed: $cmd"
+    broken=1
+  fi
+done
+ls "$HOME"/.config/autostart/*.desktop >/dev/null 2>&1 \
+  && hint "login items: $(ls "$HOME"/.config/autostart/*.desktop | xargs -n1 basename | sed 's/\.desktop$//' | paste -sd, - | sed 's/,/, /g')"
+[ "$broken" = 0 ] && ok "No broken login items"
+
+# ---------------------------------------------------------------- logs
+section "Logs"
+journalctl --disk-usage 2>/dev/null | sed 's/^/  /'
+hint "trim: sudo journalctl --vacuum-time=4weeks"
+
+# ---------------------------------------------------------------- home
+section "Possibly stale app config (untouched for a year)"
+# A folder counts as stale only if nothing anywhere inside it changed in a year.
+old=$(find "$HOME/.config" "$HOME/.local/share" -mindepth 1 -maxdepth 1 -type d 2>/dev/null \
+      | while read -r p; do
+          case "$(basename "$p")" in Trash|applications|autostart|fonts|icons|keyrings) continue ;; esac
+          [ -z "$(find "$p" -mtime -365 -print -quit 2>/dev/null)" ] && echo "$p"
+        done | sort)
+if [ -n "$old" ]; then
+  while read -r p; do
+    printf '        %-8s %s\n' "$(du -sh "$p" 2>/dev/null | cut -f1)" "${p/#$HOME/\~}"
+  done <<<"$old"
+  hint "a folder here may belong to an app you removed; check before deleting"
+else
+  ok "Nothing untouched for a year"
+fi
+
+section "Largest folders in home"
+du -h --max-depth=1 "$HOME" 2>/dev/null | sort -rh | sed -n '2,11p' | sed "s|$HOME|~|; s/^/  /"
+
+echo
