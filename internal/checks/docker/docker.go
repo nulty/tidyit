@@ -8,13 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
 	"tidy/internal/engine"
+	"tidy/internal/execx"
 	"tidy/internal/fsx"
 	"tidy/pkg/manifest"
 	"tidy/pkg/report"
@@ -69,17 +69,7 @@ func Plugin() *engine.Plugin {
 }
 
 func docker(ctx context.Context, args ...string) ([]byte, error) {
-	var stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, "docker", args...)
-	cmd.Stderr = &stderr
-	out, err := cmd.Output()
-	if err != nil {
-		if msg := strings.TrimSpace(stderr.String()); msg != "" {
-			return nil, fmt.Errorf("docker %s: %s", args[0], msg)
-		}
-		return nil, fmt.Errorf("docker %s: %w", args[0], err)
-	}
-	return out, nil
+	return execx.Output(ctx, "docker", args...)
 }
 
 // jsonLines decodes `--format '{{json .}}'` output, one object per line.

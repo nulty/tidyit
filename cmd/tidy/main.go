@@ -14,9 +14,14 @@ import (
 	"syscall"
 	"time"
 
+	"tidy/internal/checks/apt"
 	"tidy/internal/checks/bleachbit"
 	"tidy/internal/checks/core"
 	"tidy/internal/checks/docker"
+	"tidy/internal/checks/flatpak"
+	"tidy/internal/checks/network"
+	"tidy/internal/checks/snap"
+	"tidy/internal/checks/systemd"
 	"tidy/internal/config"
 	"tidy/internal/engine"
 	"tidy/pkg/report"
@@ -63,6 +68,11 @@ func registry() *engine.Registry {
 		r.Add(p)
 	}
 	r.Add(docker.Plugin())
+	r.Add(snap.Plugin())
+	r.Add(flatpak.Plugin())
+	r.Add(apt.Plugin())
+	r.Add(network.Plugin())
+	r.Add(systemd.Plugin())
 	r.Add(bleachbit.Plugin())
 	return r
 }
@@ -204,7 +214,7 @@ func checksCmd(args []string) error {
 		if in.OptErr != nil {
 			state += "  (config error: " + in.OptErr.Error() + ")"
 		}
-		fmt.Printf("%-28s %s  [%s via %s.%s]%s\n", in.ID, in.Title, in.Origin, in.Plugin.Manifest.ID, in.Spec.ID, state)
+		fmt.Printf("%-34s %s  [%s via %s.%s]%s\n", in.ID, in.Title, in.Origin, in.Plugin.Manifest.ID, in.Spec.ID, state)
 		if !*verbose || in.OptErr != nil {
 			continue
 		}
