@@ -45,7 +45,7 @@ func Plugin() *engine.Plugin {
 				},
 				{
 					ID:    "unattached-volumes",
-					Title: "Volumes not attached to any container",
+					Title: "Volumes not used by any container",
 					Hint:  "volumes can hold data, check first: docker volume inspect <name>",
 					Options: map[string]manifest.Option{
 						"include_anonymous": {Type: manifest.TypeBoolean, Default: true,

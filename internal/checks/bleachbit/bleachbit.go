@@ -42,8 +42,6 @@ func Plugin() *engine.Plugin {
 						Description: "preset: what you ticked in the BleachBit window. all-but-warning: every cleaner without a warning. custom: the cleaners option"},
 					"cleaners": {Type: manifest.TypeStrings, Default: []string{},
 						Description: "For selection = custom: cleaner options such as thumbnails.cache (see bleachbit --list-cleaners)"},
-					"max_items": {Type: manifest.TypeInteger, Default: 10, Min: manifest.Ptr(1),
-						Description: "Show at most this many folders, largest first"},
 				},
 			}},
 		},
@@ -110,16 +108,7 @@ func preview(ctx context.Context, in engine.Input) (engine.Outcome, error) {
 	}
 
 	groups := sum.sortedGroups()
-	max := in.Options.Int("max_items")
-	for i, g := range groups {
-		if i == max {
-			var rest int64
-			for _, r := range groups[max:] {
-				rest += r.size
-			}
-			out.Notes = append(out.Notes, fmt.Sprintf("and %d more folders (%s); raise max_items to see them", len(groups)-max, fsx.Human(rest)))
-			break
-		}
+	for _, g := range groups {
 		detail := fmt.Sprintf("%d files", g.files)
 		if g.special > 0 {
 			detail += fmt.Sprintf(", %d databases cleaned", g.special)

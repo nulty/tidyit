@@ -98,18 +98,21 @@ type Report struct {
 	Results       []Result  `json:"results"`
 }
 
-// SafeTotal sums the sizes of items marked safe across results, counting
-// each place on disk once: an item whose path is the same as, or inside,
-// another safe item's path is not added again. Different checks often
-// look at the same folders (e.g. ~/.cache), so a plain sum overstates.
-// Overlaps that are not nested paths cannot be detected, so treat the
-// result as an upper estimate.
-func SafeTotal(results []Result) int64 {
+// SafeTotal sums the sizes of items marked safe; see Total.
+func SafeTotal(results []Result) int64 { return Total(results, ConfidenceSafe) }
+
+// Total sums the sizes of items with the given confidence across results,
+// counting each place on disk once: an item whose path is the same as, or
+// inside, another counted item's path is not added again. Different checks
+// often look at the same folders (e.g. ~/.cache), so a plain sum
+// overstates. Overlaps that are not nested paths cannot be detected, so
+// treat the result as an upper estimate.
+func Total(results []Result, conf Confidence) int64 {
 	sizes := map[string]int64{} // path -> largest size reported for it
 	var total int64
 	for _, r := range results {
 		for _, it := range r.Items {
-			if it.Confidence != ConfidenceSafe {
+			if it.Confidence != conf {
 				continue
 			}
 			if it.Path == "" {
@@ -126,6 +129,19 @@ func SafeTotal(results []Result) int64 {
 		}
 	}
 	return total
+}
+
+// Caution returns the least safe confidence among the result's items:
+// manual over review over safe. It is "" when there are no items.
+func (r *Result) Caution() Confidence {
+	rank := map[Confidence]int{ConfidenceSafe: 1, ConfidenceReview: 2, ConfidenceManual: 3}
+	var worst Confidence
+	for _, it := range r.Items {
+		if rank[it.Confidence] > rank[worst] {
+			worst = it.Confidence
+		}
+	}
+	return worst
 }
 
 // insideAny reports whether any parent folder of p is a key in paths.

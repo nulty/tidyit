@@ -20,3 +20,21 @@ func TestSafeTotalCountsEachPlaceOnce(t *testing.T) {
 		t.Fatalf("SafeTotal = %d, want %d", got, want)
 	}
 }
+
+func TestTotalAndCaution(t *testing.T) {
+	res := []Result{{Items: []Item{
+		{Path: "/a", Size: 10, Confidence: ConfidenceReview},
+		{Path: "/a/b", Size: 4, Confidence: ConfidenceReview},
+		{Path: "/c", Size: 3, Confidence: ConfidenceSafe},
+	}}}
+	if got := Total(res, ConfidenceReview); got != 10 {
+		t.Fatalf("review total %d", got)
+	}
+	if got := res[0].Caution(); got != ConfidenceReview {
+		t.Fatalf("caution %q", got)
+	}
+	empty := Result{}
+	if got := empty.Caution(); got != "" {
+		t.Fatalf("empty caution %q", got)
+	}
+}

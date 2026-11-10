@@ -18,9 +18,6 @@ import (
 	"tidy/pkg/report"
 )
 
-var maxItems = manifest.Option{Type: manifest.TypeInteger, Default: 20, Min: manifest.Ptr(1),
-	Description: "Show at most this many packages (the summary still counts all)"}
-
 // Plugin returns the apt plugin.
 func Plugin() *engine.Plugin {
 	return &engine.Plugin{
@@ -34,14 +31,12 @@ func Plugin() *engine.Plugin {
 					Title:       "Packages no longer needed",
 					Description: "Installed automatically as dependencies of packages that are gone.",
 					Hint:        "sudo apt autoremove --purge",
-					Options:     map[string]manifest.Option{"max_items": maxItems},
 				},
 				{
 					ID:          "leftover-config",
-					Title:       "Removed packages that left config files",
+					Title:       "Configs left by removed packages",
 					Description: "Packages removed without --purge keep their files in /etc.",
 					Hint:        "sudo apt purge $(dpkg-query -W -f '${db:Status-Abbrev} ${binary:Package}\\n' | awk '/^rc/{print $2}')",
-					Options:     map[string]manifest.Option{"max_items": maxItems},
 				},
 			},
 		},
@@ -107,7 +102,7 @@ func sizeOf(sizes map[string]int64, pkg string) int64 {
 	return 0
 }
 
-func autoremove(ctx context.Context, in engine.Input) (engine.Outcome, error) {
+func autoremove(ctx context.Context, _ engine.Input) (engine.Outcome, error) {
 	raw, err := execx.Output(ctx, "apt-get", "-s", "autoremove")
 	if err != nil {
 		return engine.Outcome{}, err
@@ -132,11 +127,10 @@ func autoremove(ctx context.Context, in engine.Input) (engine.Outcome, error) {
 	}
 	sort.SliceStable(out.Items, func(i, j int) bool { return out.Items[i].Size > out.Items[j].Size })
 	out.Summary = fmt.Sprintf("%d packages, %s installed size", len(pkgs), fsx.Human(total))
-	out.Items, out.Notes = truncate(out.Items, in.Options.Int("max_items"), "apt-get -s autoremove | grep ^Remv")
 	return out, nil
 }
 
-func leftoverConfig(ctx context.Context, in engine.Input) (engine.Outcome, error) {
+func leftoverConfig(ctx context.Context, _ engine.Input) (engine.Outcome, error) {
 	status, _, err := dpkgStatus(ctx)
 	if err != nil {
 		return engine.Outcome{}, err
@@ -158,14 +152,5 @@ func leftoverConfig(ctx context.Context, in engine.Input) (engine.Outcome, error
 	if n := len(pkgs); n > 0 {
 		out.Summary = fmt.Sprintf("%d packages", n)
 	}
-	out.Items, out.Notes = truncate(out.Items, in.Options.Int("max_items"), "dpkg -l | grep ^rc")
 	return out, nil
-}
-
-// truncate keeps the first max items and says how to see the rest.
-func truncate(items []report.Item, max int, listAll string) ([]report.Item, []string) {
-	if max <= 0 || len(items) <= max {
-		return items, nil
-	}
-	return items[:max], []string{fmt.Sprintf("%d more not shown; list all: %s", len(items)-max, listAll)}
 }

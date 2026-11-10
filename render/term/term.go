@@ -20,8 +20,21 @@ type Group struct {
 type Options struct {
 	Color       bool
 	OnlyFlagged bool // hide ok and skipped results
-	Verbose     bool // show durations and notes for every result
+	// Full lists every flagged item under its result, with its command.
+	// Without it the report is a compact overview, one line per check.
+	Full bool
+	// Verbose implies Full, shows every item (no cap), durations, notes
+	// for all results and plugin debug output.
+	Verbose bool
+	// Width is the terminal width used to fit compact lines; 0 = no limit.
+	Width int
+	// Headline lists result ids shown in the compact header rather than
+	// as rows, e.g. disk usage.
+	Headline []string
 }
+
+// fullItemCap is how many items --full shows per result; -v shows all.
+const fullItemCap = 10
 
 type palette struct{ bold, dim, yel, grn, red, cyan, rst string }
 
@@ -34,6 +47,14 @@ func newPalette(on bool) palette {
 
 // Render writes the report.
 func Render(w io.Writer, rep *report.Report, groups []Group, opt Options) {
+	if opt.Verbose || opt.Full {
+		renderFull(w, rep, groups, opt)
+		return
+	}
+	renderCompact(w, rep, groups, opt)
+}
+
+func renderFull(w io.Writer, rep *report.Report, groups []Group, opt Options) {
 	c := newPalette(opt.Color)
 	fmt.Fprintf(w, "%sTidy report%s  %s  %s%s on %s%s\n", c.bold, c.rst,
 		rep.StartedAt.Format("2006-01-02 15:04"), c.dim, rep.FinishedAt.Sub(rep.StartedAt).Round(100_000_000), rep.Host, c.rst)
@@ -92,7 +113,11 @@ func renderResult(w io.Writer, r report.Result, c palette, opt Options) {
 			line += ": " + r.Summary
 		}
 		fmt.Fprintf(w, "  %s!!%s  %s%s\n", c.yel, c.rst, line, dur)
-		for _, it := range r.Items {
+		items := r.Items
+		if !opt.Verbose && len(items) > fullItemCap {
+			items = items[:fullItemCap]
+		}
+		for _, it := range items {
 			size := ""
 			if it.Size > 0 {
 				size = fsx.Human(it.Size)
@@ -102,6 +127,20 @@ func renderResult(w io.Writer, r report.Result, c palette, opt Options) {
 				detail = "  " + c.dim + it.Detail + c.rst
 			}
 			fmt.Fprintf(w, "      %6s  %s%s  %s\n", size, it.Label, detail, tag(it.Confidence, c))
+			if it.Action != nil && it.Action.Command != "" {
+				fmt.Fprintf(w, "              %s$ %s%s\n", c.dim, it.Action.Command, c.rst)
+			}
+		}
+		if rest := r.Items[len(items):]; len(rest) > 0 {
+			var size int64
+			for _, it := range rest {
+				size += it.Size
+			}
+			more := fmt.Sprintf("and %d more", len(rest))
+			if size > 0 {
+				more += " (" + fsx.Human(size) + ")"
+			}
+			fmt.Fprintf(w, "      %6s  %s%s; tidy -v --check %s lists all%s\n", "", c.dim, more, r.ID, c.rst)
 		}
 	}
 	// Notes carry context (e.g. disk usage per mount); show them for ok and

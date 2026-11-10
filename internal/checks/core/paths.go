@@ -49,8 +49,6 @@ func Paths() *engine.Plugin {
 						Description: "Only flag things owned by the current user"},
 					"confidence": {Type: manifest.TypeString, Default: "review", Enum: []string{"safe", "review", "manual"},
 						Description: "How safe the found items are to remove"},
-					"max_items": {Type: manifest.TypeInteger, Default: 15, Min: manifest.Ptr(1),
-						Description: "Show at most this many items, largest first"},
 				},
 			}},
 		},
@@ -136,16 +134,7 @@ func pathScan(ctx context.Context, in engine.Input) (engine.Outcome, error) {
 	}
 	out.Summary = fmt.Sprintf("%d found, %s", len(all), fsx.Human(total))
 	conf := report.Confidence(o.String("confidence"))
-	shown := all
-	if max := o.Int("max_items"); len(shown) > max {
-		var rest int64
-		for _, f := range shown[max:] {
-			rest += f.size
-		}
-		out.Notes = append(out.Notes, fmt.Sprintf("and %d more (%s); raise max_items to see them", len(shown)-max, fsx.Human(rest)))
-		shown = shown[:max]
-	}
-	for _, f := range shown {
+	for _, f := range all {
 		out.Items = append(out.Items, report.Item{
 			ID: f.path, Label: fsx.Pretty(f.path), Path: f.path, Size: f.size,
 			Detail:     "changed " + fsx.Age(f.mtime),

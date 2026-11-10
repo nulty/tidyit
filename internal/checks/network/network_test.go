@@ -35,7 +35,7 @@ ACC_WIFI:u9:802-11-wireless:wlp59s0:yes:1794326786
 		got = append(got, it.ID+" "+string(it.Confidence)+" "+it.Detail)
 	}
 	want := []string{
-		"u4 review Wi-Fi, autoconnect on but never connected (2 connections share this name; delete by uuid u4)",
+		"u4 review Wi-Fi, autoconnect on but never connected (2 connections share this name; its command uses the uuid)",
 		"u6 review Wi-Fi, last used 2025-09-16",
 		"u5 safe bridge with no device, likely a deleted Docker network",
 		"u8 review bridge with no device",

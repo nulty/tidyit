@@ -108,7 +108,7 @@ func stale(conns []conn, cutoff time.Time) []report.Item {
 			continue
 		}
 		if names[c.name] > 1 {
-			it.Detail += fmt.Sprintf(" (%d connections share this name; delete by uuid %s)", names[c.name], c.uuid)
+			it.Detail += fmt.Sprintf(" (%d connections share this name; its command uses the uuid)", names[c.name])
 		}
 		items = append(items, it)
 	}

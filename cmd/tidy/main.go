@@ -10,9 +10,11 @@ import (
 	"os"
 	"os/signal"
 	"sort"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"tidy/internal/checks/apt"
 	"tidy/internal/checks/bleachbit"
@@ -94,9 +96,9 @@ func registry() (*engine.Registry, []string) {
 }
 
 type runOpts struct {
-	json, onlyFlagged, verbose bool
-	checks                     string
-	configPath                 string
+	json, onlyFlagged, verbose, full bool
+	checks                           string
+	configPath                       string
 }
 
 func runFlags(out io.Writer) (*flag.FlagSet, *runOpts) {
@@ -105,7 +107,8 @@ func runFlags(out io.Writer) (*flag.FlagSet, *runOpts) {
 	fs.SetOutput(out)
 	fs.BoolVar(&o.json, "json", false, "print the report as JSON")
 	fs.BoolVar(&o.onlyFlagged, "only-flagged", false, "hide checks that found nothing or were skipped")
-	fs.BoolVar(&o.verbose, "v", false, "show timings and all notes")
+	fs.BoolVar(&o.full, "full", false, "list every flagged item with its command, grouped by plugin")
+	fs.BoolVar(&o.verbose, "v", false, "like --full, plus every item (no cap), timings, notes and plugin debug output")
 	fs.StringVar(&o.checks, "check", "", "comma-separated check ids, globs or plugin ids to run, e.g. docker,downloads (runs them even if off)")
 	fs.StringVar(&o.configPath, "config", "", "config file (default "+config.DefaultPath()+")")
 	return fs, o
@@ -168,10 +171,18 @@ func runCmd(args []string) error {
 		enc.SetIndent("", "  ")
 		return enc.Encode(rep)
 	}
+	tty := isTerminal(os.Stdout)
+	width := 0
+	if tty {
+		width = termWidth(os.Stdout)
+	}
 	term.Render(os.Stdout, rep, groups(rep, reg), term.Options{
-		Color:       isTerminal(os.Stdout) && os.Getenv("NO_COLOR") == "",
+		Color:       tty && os.Getenv("NO_COLOR") == "",
 		OnlyFlagged: o.onlyFlagged,
+		Full:        o.full,
 		Verbose:     o.verbose,
+		Width:       width,
+		Headline:    []string{"disk.usage"},
 	})
 	return nil
 }
@@ -254,6 +265,19 @@ func checksCmd(args []string) error {
 		fmt.Fprintln(os.Stderr, "\ntidy: warning:", w)
 	}
 	return nil
+}
+
+// termWidth asks the terminal for its width, falling back to $COLUMNS
+// and then 100.
+func termWidth(f *os.File) int {
+	var ws struct{ Row, Col, X, Y uint16 }
+	if _, _, errno := syscall.Syscall(syscall.SYS_IOCTL, f.Fd(), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&ws))); errno == 0 && ws.Col > 0 {
+		return int(ws.Col)
+	}
+	if n, err := strconv.Atoi(os.Getenv("COLUMNS")); err == nil && n > 0 {
+		return n
+	}
+	return 100
 }
 
 func isTerminal(f *os.File) bool {
