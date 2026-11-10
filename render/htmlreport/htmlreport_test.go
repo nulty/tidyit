@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"tidy/pkg/report"
-	"tidy/render/view"
+	"tidyit/pkg/report"
+	"tidyit/render/view"
 )
 
 func sample() (*report.Report, []view.Group) {
@@ -76,7 +76,7 @@ func TestRenderEscapes(t *testing.T) {
 
 func TestEmbeddedJSONRoundTrips(t *testing.T) {
 	out := render(t)
-	m := regexp.MustCompile(`(?s)<script type="application/json" id="tidy-report">(.*?)</script>`).FindStringSubmatch(out)
+	m := regexp.MustCompile(`(?s)<script type="application/json" id="tidyit-report">(.*?)</script>`).FindStringSubmatch(out)
 	if m == nil {
 		t.Fatal("no embedded JSON")
 	}
@@ -96,7 +96,7 @@ func TestRenderEmptyReport(t *testing.T) {
 	if err := Render(&b, rep, nil, Options{}); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(b.String(), "Tidy report") {
+	if !strings.Contains(b.String(), "Tidy It report") {
 		t.Fatal("empty report did not render")
 	}
 }

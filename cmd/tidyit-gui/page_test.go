@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"tidy/pkg/report"
+	"tidyit/pkg/report"
 )
 
 func TestItemSubtitle(t *testing.T) {

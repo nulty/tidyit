@@ -6,10 +6,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"tidy/internal/engine"
-	"tidy/internal/fsx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Trash reports the size of the user's freedesktop trash.

@@ -1,4 +1,4 @@
-// Package docker is a bundled plugin: it ships with tidy but only runs when
+// Package docker is a bundled plugin: it ships with tidyit but only runs when
 // the docker CLI is installed and the daemon is reachable.
 package docker
 
@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"tidy/internal/engine"
-	"tidy/internal/execx"
-	"tidy/internal/fsx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/execx"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Plugin returns the docker plugin.

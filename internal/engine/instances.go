@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"tidy/internal/config"
-	"tidy/pkg/manifest"
+	"tidyit/internal/config"
+	"tidyit/pkg/manifest"
 )
 
 // Instance is one runnable check: a plugin's check with resolved options.
@@ -25,7 +25,7 @@ type Instance struct {
 	Origin  string        // "default", "preset" or "config"
 }
 
-// Registry holds the plugins tidy knows about, in display order.
+// Registry holds the plugins tidyit knows about, in display order.
 type Registry struct {
 	plugins []*Plugin
 }
@@ -143,7 +143,7 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 	}
 	for _, id := range cfg.IDs() {
 		if !matched[id] && cfg.Checks[id].Use == "" {
-			warnings = append(warnings, fmt.Sprintf("config [checks.%s] matches no check (see `tidy checks`)", id))
+			warnings = append(warnings, fmt.Sprintf("config [checks.%s] matches no check (see `tidyit checks`)", id))
 		}
 	}
 	return out, warnings

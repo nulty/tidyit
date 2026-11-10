@@ -1,4 +1,4 @@
-// Command tidy reports stale things on a Linux machine. It is read-only.
+// Command tidyit reports stale things on a Linux machine. It is read-only.
 package main
 
 import (
@@ -17,20 +17,20 @@ import (
 	"time"
 	"unsafe"
 
-	"tidy/internal/app"
-	"tidy/internal/config"
-	"tidy/internal/engine"
-	"tidy/pkg/report"
-	"tidy/render/htmlreport"
-	"tidy/render/term"
-	"tidy/render/view"
+	"tidyit/internal/app"
+	"tidyit/internal/config"
+	"tidyit/internal/engine"
+	"tidyit/pkg/report"
+	"tidyit/render/htmlreport"
+	"tidyit/render/term"
+	"tidyit/render/view"
 )
 
-const usage = `tidy: report stale things on this machine (read-only)
+const usage = `tidyit: report stale things on this machine (read-only)
 
 Usage:
-  tidy [run] [flags]     run checks and print a report
-  tidy checks [-v]       list checks, their options and where settings come from
+  tidyit [run] [flags]     run checks and print a report
+  tidyit checks [-v]       list checks, their options and where settings come from
 
 Run flags:
 `
@@ -52,10 +52,10 @@ func main() {
 		fs, _ := runFlags(os.Stdout)
 		fs.PrintDefaults()
 	default:
-		err = fmt.Errorf("unknown command %q (try: tidy help)", cmd)
+		err = fmt.Errorf("unknown command %q (try: tidyit help)", cmd)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "tidy:", err)
+		fmt.Fprintln(os.Stderr, "tidyit:", err)
 		os.Exit(2)
 	}
 }
@@ -67,7 +67,7 @@ type runOpts struct {
 
 func runFlags(out io.Writer) (*flag.FlagSet, *runOpts) {
 	o := &runOpts{}
-	fs := flag.NewFlagSet("tidy run", flag.ContinueOnError)
+	fs := flag.NewFlagSet("tidyit run", flag.ContinueOnError)
 	fs.SetOutput(out)
 	fs.BoolVar(&o.json, "json", false, "print the report as JSON")
 	fs.StringVar(&o.html, "html", "", "write a self-contained HTML report to this file (- for stdout)")
@@ -100,10 +100,10 @@ func runCmd(args []string) error {
 		return err
 	}
 	if len(insts) == 0 {
-		return fmt.Errorf("no checks match %q (see: tidy checks)", o.checks)
+		return fmt.Errorf("no checks match %q (see: tidyit checks)", o.checks)
 	}
 	for _, w := range warnings {
-		fmt.Fprintln(os.Stderr, "tidy: warning:", w)
+		fmt.Fprintln(os.Stderr, "tidyit: warning:", w)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -152,12 +152,12 @@ func writeHTML(path string, rep *report.Report, gs []view.Group) error {
 		return err
 	}
 	abs, _ := filepath.Abs(path)
-	fmt.Fprintf(os.Stderr, "tidy: wrote %s\n", abs)
+	fmt.Fprintf(os.Stderr, "tidyit: wrote %s\n", abs)
 	return nil
 }
 
 func checksCmd(args []string) error {
-	fs := flag.NewFlagSet("tidy checks", flag.ContinueOnError)
+	fs := flag.NewFlagSet("tidyit checks", flag.ContinueOnError)
 	verbose := fs.Bool("v", false, "show every option with its value and description")
 	configPath := fs.String("config", "", "config file")
 	if err := fs.Parse(args); err != nil {
@@ -204,7 +204,7 @@ func checksCmd(args []string) error {
 		}
 	}
 	for _, w := range warnings {
-		fmt.Fprintln(os.Stderr, "\ntidy: warning:", w)
+		fmt.Fprintln(os.Stderr, "\ntidyit: warning:", w)
 	}
 	return nil
 }

@@ -6,8 +6,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"tidy/internal/fsx"
-	"tidy/pkg/report"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/report"
 )
 
 // This file holds the window's view model: plain functions over the report

@@ -11,7 +11,7 @@ import (
 )
 
 // Screenshot mode is a development aid for design work. With
-// TIDY_GUI_SCREENSHOTS=DIR the window, once its results are in, shows the
+// TIDYIT_GUI_SCREENSHOTS=DIR the window, once its results are in, shows the
 // overview, the first few flagged checks and Other checks in turn,
 // scrolling each one screenful at a time. Then it narrows the window
 // below the breakpoint and shows the sidebar and one check. Then it
@@ -21,7 +21,7 @@ import (
 // capture is left to the display server.) Set
 // ADW_DEBUG_COLOR_SCHEME=prefer-dark for the dark style.
 const (
-	screenshotEnv = "TIDY_GUI_SCREENSHOTS"
+	screenshotEnv = "TIDYIT_GUI_SCREENSHOTS"
 	checksInShots = 3    // flagged checks shown
 	maxShots      = 12   // per page
 	settleMS      = 600  // wait for layout and animations before a stop
@@ -33,7 +33,7 @@ func screenshotDir() string { return os.Getenv(screenshotEnv) }
 // takeScreenshots captures the pages, then the narrow layout, and quits.
 func (w *window) takeScreenshots(dir string) {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		fmt.Fprintln(os.Stderr, "tidy-gui:", err)
+		fmt.Fprintln(os.Stderr, "tidyit-gui:", err)
 		w.Application().Quit()
 		return
 	}

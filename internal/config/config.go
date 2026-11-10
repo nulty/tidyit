@@ -1,4 +1,4 @@
-// Package config loads the user's tidy config: overrides only, never the
+// Package config loads the user's tidyit config: overrides only, never the
 // full set of defaults (those live in each plugin's manifest).
 //
 //	[run]
@@ -52,13 +52,13 @@ type Config struct {
 	Checks map[string]*Entry
 }
 
-// DefaultPath is $XDG_CONFIG_HOME/tidy/config.toml.
+// DefaultPath is $XDG_CONFIG_HOME/tidyit/config.toml.
 func DefaultPath() string {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		return ""
 	}
-	return filepath.Join(dir, "tidy", "config.toml")
+	return filepath.Join(dir, "tidyit", "config.toml")
 }
 
 // Load reads the config at path. A missing file is not an error unless

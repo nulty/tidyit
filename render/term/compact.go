@@ -6,9 +6,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"tidy/internal/fsx"
-	"tidy/pkg/report"
-	"tidy/render/view"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/report"
+	"tidyit/render/view"
 )
 
 const (
@@ -23,7 +23,7 @@ func renderCompact(w io.Writer, rep *report.Report, groups []Group, opt Options)
 	o := view.Build(groups, opt.Headline)
 	heads, rows, oks, skipped, errs := o.Headlines, o.Flagged, o.OK, o.Skipped, o.Errors
 
-	fmt.Fprintf(w, "%sTidy report%s  %s%s · %s · %s%s\n", c.bold, c.rst, c.dim,
+	fmt.Fprintf(w, "%sTidy It report%s  %s%s · %s · %s%s\n", c.bold, c.rst, c.dim,
 		rep.StartedAt.Format("2006-01-02 15:04"), rep.Host, rep.FinishedAt.Sub(rep.StartedAt).Round(100_000_000), c.rst)
 	var line []string
 	for _, h := range heads {
@@ -80,7 +80,7 @@ func renderCompact(w io.Writer, rep *report.Report, groups []Group, opt Options)
 			fmt.Fprintf(w, "%s  --    %s: %s%s\n", c.dim, r.Title, clip(r.SkipReason, room(opt.Width, lead)), c.rst)
 		}
 	}
-	fmt.Fprintf(w, "\n%sdetails: tidy --full    one check: tidy --full --check <id>%s\n", c.dim, c.rst)
+	fmt.Fprintf(w, "\n%sdetails: tidyit --full    one check: tidyit --full --check <id>%s\n", c.dim, c.rst)
 }
 
 // itemPreview names the first few items, with sizes, fitting width runes

@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Input is what a check function receives.

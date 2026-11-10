@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"tidy/pkg/report"
+	"tidyit/pkg/report"
 )
 
 // Group is a titled set of results, e.g. all results of one plugin.

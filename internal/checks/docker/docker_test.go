@@ -3,7 +3,7 @@ package docker
 import (
 	"testing"
 
-	"tidy/internal/fsx"
+	"tidyit/internal/fsx"
 )
 
 func TestParseSize(t *testing.T) {

@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"tidy/internal/engine"
-	"tidy/internal/fsx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Paths provides paths.scan, the general "files matching X, older than N

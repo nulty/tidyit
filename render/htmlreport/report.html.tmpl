@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="generator" content="tidy">
-<title>Tidy report · {{.Host}} · {{.Date}}</title>
+<meta name="generator" content="tidyit">
+<title>Tidy It report · {{.Host}} · {{.Date}}</title>
 <style>
 :root {
   --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e3df;
@@ -105,7 +105,7 @@ footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
 <body>
 <main>
 <header>
-  <h1>Tidy report</h1>
+  <h1>Tidy It report</h1>
   <p class="meta">{{.Host}} · {{.Date}} · took {{.Duration}} · read-only: nothing was changed</p>
   {{if .Headlines}}<p class="headlines">{{range $i, $h := .Headlines}}{{if $i}} · {{end}}{{$h}}{{end}}</p>{{end}}
 </header>
@@ -181,9 +181,9 @@ footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
 </section>
 {{end}}
 
-<footer>Commands are suggestions; tidy never runs them. Sizes count disk blocks where tidy measured them, and decimal sizes where Docker or apt reported them. The full report is embedded as JSON in this file (<code>#tidy-report</code>).</footer>
+<footer>Commands are suggestions; Tidy It never runs them. Sizes count disk blocks where Tidy It measured them, and decimal sizes where Docker or apt reported them. The full report is embedded as JSON in this file (<code>#tidy-report</code>).</footer>
 </main>
-<script type="application/json" id="tidy-report">{{.JSON}}</script>
+<script type="application/json" id="tidyit-report">{{.JSON}}</script>
 <script>
 (function () {
   var checks = Array.prototype.slice.call(document.querySelectorAll("details.check"));

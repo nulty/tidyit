@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# tidy plugin protocol 1: read the request on stdin, write JSON lines.
+# Tidy It plugin protocol 1: read the request on stdin, write JSON lines.
 set -euo pipefail
 
 req=$(cat)

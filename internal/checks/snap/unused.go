@@ -15,8 +15,8 @@ import (
 	"syscall"
 	"time"
 
-	"tidy/internal/engine"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/pkg/report"
 )
 
 const (
@@ -24,7 +24,7 @@ const (
 	seedFile    = "/var/lib/snapd/seed/seed.yaml"
 )
 
-// snapInfo is the part of snapd's /v2/snaps entry tidy reads.
+// snapInfo is the part of snapd's /v2/snaps entry tidyit reads.
 type snapInfo struct {
 	Name          string    `json:"name"`
 	Type          string    `json:"type"` // app, base, snapd, os, kernel, gadget
@@ -50,7 +50,7 @@ type slotRef struct {
 	Slot string `json:"slot"`
 }
 
-// connections is the part of /v2/connections?select=all tidy reads.
+// connections is the part of /v2/connections?select=all tidyit reads.
 type connections struct {
 	Established []struct {
 		Plug      plugRef `json:"plug"`

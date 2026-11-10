@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"tidy/pkg/report"
+	"tidyit/pkg/report"
 )
 
 func sample() (*report.Report, []Group) {

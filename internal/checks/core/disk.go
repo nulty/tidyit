@@ -10,10 +10,10 @@ import (
 	"strings"
 	"syscall"
 
-	"tidy/internal/engine"
-	"tidy/internal/fsx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Filesystems that hold user data. Everything else (tmpfs, squashfs for

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"tidy/internal/fsx"
+	"tidyit/internal/fsx"
 )
 
 func TestParsePreviewGroupsByFolder(t *testing.T) {

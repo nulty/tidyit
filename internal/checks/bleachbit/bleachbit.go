@@ -16,10 +16,10 @@ import (
 	"sort"
 	"strings"
 
-	"tidy/internal/engine"
-	"tidy/internal/fsx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Plugin returns the bleachbit plugin.
@@ -33,7 +33,7 @@ func Plugin() *engine.Plugin {
 				Title:       "BleachBit preview",
 				Description: "What BleachBit would delete with your selection, grouped by folder. Nothing is deleted.",
 				Timeout:     "120s",
-				// Overlaps with tidy's own cache checks and is the slowest
+				// Overlaps with tidyit's own cache checks and is the slowest
 				// check, so it only runs when asked for.
 				DefaultOff: true,
 				Options: map[string]manifest.Option{

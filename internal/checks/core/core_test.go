@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"tidy/internal/engine"
+	"tidyit/internal/engine"
 )
 
 func write(t *testing.T, path string, size int, age time.Duration) {
@@ -122,13 +122,13 @@ func TestAutostartBroken(t *testing.T) {
 		write(t, filepath.Join(dir, "autostart", file), 0, 0)
 		os.WriteFile(filepath.Join(dir, "autostart", file), []byte("[Desktop Entry]\n"+body), 0o644)
 	}
-	entry(cfgHome, "gone.desktop", "Name=Gone\nExec=no-such-program-tidy --x\n")
+	entry(cfgHome, "gone.desktop", "Name=Gone\nExec=no-such-program-tidyit --x\n")
 	entry(cfgHome, "ok.desktop", "Exec=sh -c true\n")
-	entry(cfgHome, "hidden.desktop", "Exec=no-such-program-tidy\nHidden=true\n")
-	entry(cfgHome, "tryexec.desktop", "TryExec=no-such-tryexec-tidy\nExec=sh\n")
-	entry(sysDir, "sys-broken.desktop", "Exec=no-such-sys-tidy\n")
-	entry(sysDir, "sys-other-desktop.desktop", "TryExec=no-such-tryexec-tidy\nExec=no-such-tryexec-tidy\n")
-	entry(sysDir, "overridden.desktop", "Exec=no-such-program-tidy\n")
+	entry(cfgHome, "hidden.desktop", "Exec=no-such-program-tidyit\nHidden=true\n")
+	entry(cfgHome, "tryexec.desktop", "TryExec=no-such-tryexec-tidyit\nExec=sh\n")
+	entry(sysDir, "sys-broken.desktop", "Exec=no-such-sys-tidyit\n")
+	entry(sysDir, "sys-other-desktop.desktop", "TryExec=no-such-tryexec-tidyit\nExec=no-such-tryexec-tidyit\n")
+	entry(sysDir, "overridden.desktop", "Exec=no-such-program-tidyit\n")
 	entry(cfgHome, "overridden.desktop", "Exec=sh\n")
 
 	spec := Autostart().Manifest.Checks[0]

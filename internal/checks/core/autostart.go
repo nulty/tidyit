@@ -10,10 +10,10 @@ import (
 	"sort"
 	"strings"
 
-	"tidy/internal/engine"
-	"tidy/internal/fsx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Autostart reports login items (XDG Autostart) whose program is missing.
@@ -124,7 +124,7 @@ func loadAutostart(dir string, user bool, into map[string]*desktopEntry) {
 	}
 }
 
-// parseDesktop reads the keys tidy needs from a .desktop file's
+// parseDesktop reads the keys tidyit needs from a .desktop file's
 // [Desktop Entry] group.
 func parseDesktop(path string) (*desktopEntry, error) {
 	f, err := os.Open(path)

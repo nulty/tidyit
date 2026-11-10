@@ -1,4 +1,4 @@
-// Package app sets up a tidy run the same way for every front end: the
+// Package app sets up a tidyit run the same way for every front end: the
 // plugin registry, config, check instances, and the order results are
 // shown in. The CLI and the GUI both build on it.
 package app
@@ -7,19 +7,19 @@ import (
 	"fmt"
 	"sort"
 
-	"tidy/internal/checks/apt"
-	"tidy/internal/checks/bleachbit"
-	"tidy/internal/checks/core"
-	"tidy/internal/checks/docker"
-	"tidy/internal/checks/flatpak"
-	"tidy/internal/checks/network"
-	"tidy/internal/checks/snap"
-	"tidy/internal/checks/systemd"
-	"tidy/internal/config"
-	"tidy/internal/engine"
-	"tidy/internal/external"
-	"tidy/pkg/report"
-	"tidy/render/view"
+	"tidyit/internal/checks/apt"
+	"tidyit/internal/checks/bleachbit"
+	"tidyit/internal/checks/core"
+	"tidyit/internal/checks/docker"
+	"tidyit/internal/checks/flatpak"
+	"tidyit/internal/checks/network"
+	"tidyit/internal/checks/snap"
+	"tidyit/internal/checks/systemd"
+	"tidyit/internal/config"
+	"tidyit/internal/engine"
+	"tidyit/internal/external"
+	"tidyit/pkg/report"
+	"tidyit/render/view"
 )
 
 // Headline lists the checks summarised in a report's header instead of

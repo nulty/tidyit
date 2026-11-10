@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"tidy/internal/config"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/config"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 func testPlugin() *Plugin {
@@ -159,7 +159,7 @@ func TestRunnerStatuses(t *testing.T) {
 func TestMissingBinarySkipsWholePlugin(t *testing.T) {
 	var calls atomic.Int32
 	p := &Plugin{
-		Manifest: manifest.Manifest{ID: "m", Requires: []string{"definitely-not-a-real-binary-tidy"},
+		Manifest: manifest.Manifest{ID: "m", Requires: []string{"definitely-not-a-real-binary-tidyit"},
 			Checks: []manifest.CheckSpec{{ID: "a"}, {ID: "b"}}},
 		Checks: map[string]CheckFunc{
 			"a": func(context.Context, Input) (Outcome, error) { calls.Add(1); return Outcome{}, nil },

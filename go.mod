@@ -1,4 +1,4 @@
-module tidy
+module tidyit
 
 go 1.27.3
 

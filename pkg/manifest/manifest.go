@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// ProtocolVersion is the tidy <-> plugin contract version.
+// ProtocolVersion is the tidyit <-> plugin contract version.
 const ProtocolVersion = 1
 
 // Manifest is a plugin's declaration, loaded from plugin.toml or built in.
@@ -46,7 +46,7 @@ func (m *Manifest) Validate() error {
 		return fmt.Errorf("protocol is missing (add: protocol = %d)", ProtocolVersion)
 	}
 	if m.Protocol != ProtocolVersion {
-		return fmt.Errorf("protocol %d is not supported (this tidy speaks protocol %d)", m.Protocol, ProtocolVersion)
+		return fmt.Errorf("protocol %d is not supported (this tidyit speaks protocol %d)", m.Protocol, ProtocolVersion)
 	}
 	if len(m.Checks) == 0 {
 		return fmt.Errorf("declares no checks")

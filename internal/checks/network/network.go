@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"tidy/internal/engine"
-	"tidy/internal/execx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/execx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Plugin returns the NetworkManager plugin.

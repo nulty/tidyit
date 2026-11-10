@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Tidy
+Name=Tidy It
 Comment=See stale things on this laptop that cleaners miss
-Exec=tidy-gui
+Exec=tidyit-gui
 Icon=edit-clear-all-symbolic
 Terminal=false
 Categories=System;

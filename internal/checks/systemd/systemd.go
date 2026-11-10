@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"tidy/internal/engine"
-	"tidy/internal/execx"
-	"tidy/internal/fsx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/execx"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Plugin returns the systemd plugin.

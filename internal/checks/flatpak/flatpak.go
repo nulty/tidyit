@@ -1,7 +1,7 @@
 // Package flatpak is a bundled plugin. It runs when flatpak is installed.
 //
 // flatpak has no dry run for `uninstall --unused` (and --noninteractive
-// implies --assumeyes), so tidy never runs it. It works out unused runtimes
+// implies --assumeyes), so tidyit never runs it. It works out unused runtimes
 // itself from `flatpak list` and app metadata, erring towards not flagging.
 package flatpak
 
@@ -13,10 +13,10 @@ import (
 	"sort"
 	"strings"
 
-	"tidy/internal/engine"
-	"tidy/internal/execx"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/execx"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // Plugin returns the flatpak plugin.
@@ -177,7 +177,7 @@ func unusedRuntimes(ctx context.Context, _ engine.Input) (engine.Outcome, error)
 		})
 	}
 	if n := len(out.Items); n > 0 {
-		out.Summary = fmt.Sprintf("tidy's estimate of %d; compare with flatpak's own list before removing", n)
+		out.Summary = fmt.Sprintf("Tidy It's estimate of %d; compare with flatpak's own list before removing", n)
 	}
 	return out, nil
 }

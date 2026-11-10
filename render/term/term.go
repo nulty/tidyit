@@ -6,9 +6,9 @@ import (
 	"io"
 	"strings"
 
-	"tidy/internal/fsx"
-	"tidy/pkg/report"
-	"tidy/render/view"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/report"
+	"tidyit/render/view"
 )
 
 // Group is a titled set of results, e.g. all results of one plugin.
@@ -54,7 +54,7 @@ func Render(w io.Writer, rep *report.Report, groups []Group, opt Options) {
 
 func renderFull(w io.Writer, rep *report.Report, groups []Group, opt Options) {
 	c := newPalette(opt.Color)
-	fmt.Fprintf(w, "%sTidy report%s  %s  %s%s on %s%s\n", c.bold, c.rst,
+	fmt.Fprintf(w, "%sTidy It report%s  %s  %s%s on %s%s\n", c.bold, c.rst,
 		rep.StartedAt.Format("2006-01-02 15:04"), c.dim, rep.FinishedAt.Sub(rep.StartedAt).Round(100_000_000), rep.Host, c.rst)
 
 	counts := map[report.Status]int{}
@@ -155,7 +155,7 @@ func renderResult(w io.Writer, r report.Result, c palette, opt Options) {
 			if size > 0 {
 				more += " (" + fsx.Human(size) + ")"
 			}
-			fmt.Fprintf(w, "      %6s  %s%s; tidy -v --check %s lists all%s\n", "", c.dim, more, r.ID, c.rst)
+			fmt.Fprintf(w, "      %6s  %s%s; tidyit -v --check %s lists all%s\n", "", c.dim, more, r.ID, c.rst)
 		}
 	}
 	// Notes carry context (e.g. disk usage per mount); show them for ok and

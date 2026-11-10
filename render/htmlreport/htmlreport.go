@@ -1,6 +1,6 @@
 // Package htmlreport renders a report as one self-contained HTML file:
 // inline CSS and JS, no network requests, and the full JSON report
-// embedded in a <script type="application/json" id="tidy-report"> tag so
+// embedded in a <script type="application/json" id="tidyit-report"> tag so
 // other tools can read it back.
 package htmlreport
 
@@ -14,9 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"tidy/internal/fsx"
-	"tidy/pkg/report"
-	"tidy/render/view"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/report"
+	"tidyit/render/view"
 )
 
 //go:embed report.html.tmpl
@@ -140,7 +140,7 @@ func preview(items []report.Item) string {
 // WriteFile writes the report to path. It writes a temporary file in the
 // same folder first, so a failed run never leaves half a report.
 func WriteFile(path string, rep *report.Report, groups []view.Group, opt Options) error {
-	tmp, err := os.CreateTemp(filepath.Dir(path), ".tidy-report-*.html")
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tidyit-report-*.html")
 	if err != nil {
 		return err
 	}

@@ -1,7 +1,7 @@
-// Package external loads plugins that live outside tidy: a folder holding a
+// Package external loads plugins that live outside tidyit: a folder holding a
 // plugin.toml manifest and an executable entrypoint, in any language.
 //
-// Protocol 1. For each check instance tidy runs the entrypoint once, in the
+// Protocol 1. For each check instance tidyit runs the entrypoint once, in the
 // plugin's folder, and writes one JSON object to its stdin:
 //
 //	{"protocol": 1, "check": "largest", "instance": "home-usage.largest",
@@ -41,9 +41,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"tidy/internal/engine"
-	"tidy/pkg/manifest"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/pkg/manifest"
+	"tidyit/pkg/report"
 )
 
 // ManifestFile is the manifest's name inside a plugin folder.
@@ -56,11 +56,11 @@ const (
 	maxStderr = 64 << 10 // kept from stderr (the tail)
 )
 
-// Dirs returns where tidy looks for plugins: each entry of
-// $TIDY_PLUGIN_PATH (colon separated), then $XDG_DATA_HOME/tidy/plugins.
+// Dirs returns where tidyit looks for plugins: each entry of
+// $TIDYIT_PLUGIN_PATH (colon separated), then $XDG_DATA_HOME/tidyit/plugins.
 func Dirs() []string {
 	var dirs []string
-	for _, d := range filepath.SplitList(os.Getenv("TIDY_PLUGIN_PATH")) {
+	for _, d := range filepath.SplitList(os.Getenv("TIDYIT_PLUGIN_PATH")) {
 		if d != "" {
 			dirs = append(dirs, d)
 		}
@@ -72,7 +72,7 @@ func Dirs() []string {
 		}
 	}
 	if data != "" {
-		dirs = append(dirs, filepath.Join(data, "tidy", "plugins"))
+		dirs = append(dirs, filepath.Join(data, "tidyit", "plugins"))
 	}
 	return dirs
 }
@@ -162,7 +162,7 @@ func Load(dir string) (*engine.Plugin, error) {
 	return p, nil
 }
 
-// request is what tidy writes to the plugin's stdin.
+// request is what tidyit writes to the plugin's stdin.
 type request struct {
 	Protocol int             `json:"protocol"`
 	Check    string          `json:"check"`
@@ -178,10 +178,10 @@ func run(ctx context.Context, dir, entry, check string, in engine.Input) (engine
 	cmd := exec.CommandContext(ctx, entry)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(),
-		fmt.Sprintf("TIDY_PROTOCOL=%d", manifest.ProtocolVersion),
-		"TIDY_PLUGIN_DIR="+dir,
-		"TIDY_CHECK="+check,
-		"TIDY_INSTANCE="+in.ID,
+		fmt.Sprintf("TIDYIT_PROTOCOL=%d", manifest.ProtocolVersion),
+		"TIDYIT_PLUGIN_DIR="+dir,
+		"TIDYIT_CHECK="+check,
+		"TIDYIT_INSTANCE="+in.ID,
 	)
 	cmd.Stdin = bytes.NewReader(append(req, '\n'))
 	// Run in its own process group so a timeout kills anything it started,

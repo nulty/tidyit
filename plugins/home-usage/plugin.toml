@@ -1,5 +1,5 @@
-# Example external plugin: a laptop-report check ported to tidy's plugin
-# protocol. Install it with: ln -s "$PWD" ~/.local/share/tidy/plugins/
+# Example external plugin: a laptop-report check ported to Tidy It's plugin
+# protocol. Install it with: ln -s "$PWD" ~/.local/share/tidyit/plugins/
 id = "home-usage"
 name = "Home folder"
 version = "0.1.0"

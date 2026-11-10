@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"tidy/internal/engine"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/pkg/report"
 )
 
 const okManifest = `
@@ -69,8 +69,8 @@ func TestRunItemsNotesSummary(t *testing.T) {
 req=$(cat)
 case "$req" in *'"count":3'*) ;; *) echo "bad request: $req" >&2; exit 1;; esac
 case "$req" in *'"check":"things"'*'"instance":"demo.things"'*) ;; *) echo "bad ids: $req" >&2; exit 1;; esac
-[ "$TIDY_PROTOCOL" = 1 ] || exit 3
-[ "$(pwd)" = "$TIDY_PLUGIN_DIR" ] || exit 4
+[ "$TIDYIT_PROTOCOL" = 1 ] || exit 3
+[ "$(pwd)" = "$TIDYIT_PLUGIN_DIR" ] || exit 4
 echo '{"type":"item","id":"a","label":"Thing A","size":2048,"confidence":"safe","action":{"command":"rm a"}}'
 echo
 echo '{"type":"item","label":"Thing B","detail":"old"}'

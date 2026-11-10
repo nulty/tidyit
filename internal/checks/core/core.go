@@ -3,7 +3,7 @@
 // freedesktop (XDG) specs.
 package core
 
-import "tidy/internal/engine"
+import "tidyit/internal/engine"
 
 // Plugins returns the core plugins in display order.
 func Plugins() []*engine.Plugin {

@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"tidy/pkg/report"
+	"tidyit/pkg/report"
 )
 
 // Runner runs instances in parallel and streams events.
@@ -147,10 +147,10 @@ func setErr(res *report.Result, err error) {
 }
 
 // probe checks a plugin's required binaries and root, then runs its own
-// probe. tidy never elevates itself.
+// probe. tidyit never elevates itself.
 func probe(ctx context.Context, p *Plugin) error {
 	if p.Manifest.NeedsRoot && os.Geteuid() != 0 {
-		return Skip("needs root (tidy does not use sudo; run it as root to include this)")
+		return Skip("needs root (Tidy It does not use sudo; run it as root to include this)")
 	}
 	for _, bin := range p.Manifest.Requires {
 		if _, err := exec.LookPath(bin); err != nil {

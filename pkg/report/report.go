@@ -1,4 +1,4 @@
-// Package report defines the data every tidy surface reads: the results of a
+// Package report defines the data every tidyit surface reads: the results of a
 // run and the events streamed while it happens. It is the stable contract
 // between the engine, renderers, plugins and any future GUI.
 package report
@@ -21,7 +21,7 @@ const (
 	StatusError   Status = "error"   // tried to run and failed, see Error
 )
 
-// Confidence says how sure tidy is that an item is safe to remove.
+// Confidence says how sure tidyit is that an item is safe to remove.
 type Confidence string
 
 const (
@@ -30,7 +30,7 @@ const (
 	ConfidenceManual Confidence = "manual" // needs a person to decide
 )
 
-// Action is the command that would remove or fix an item. tidy only shows it.
+// Action is the command that would remove or fix an item. tidyit only shows it.
 type Action struct {
 	Command   string `json:"command"`
 	NeedsRoot bool   `json:"needs_root,omitempty"`

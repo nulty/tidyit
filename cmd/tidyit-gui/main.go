@@ -1,4 +1,4 @@
-// Command tidy-gui is the GTK4/libadwaita front end for tidy. Like the CLI
+// Command tidyit-gui is the GTK4/libadwaita front end for tidyit. Like the CLI
 // it is read-only: it runs the checks, shows what they found and lets you
 // copy each command; it never runs one.
 package main
@@ -16,15 +16,15 @@ import (
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 
-	"tidy/internal/app"
-	"tidy/internal/config"
-	"tidy/internal/engine"
-	"tidy/pkg/report"
-	"tidy/render/htmlreport"
-	"tidy/render/view"
+	"tidyit/internal/app"
+	"tidyit/internal/config"
+	"tidyit/internal/engine"
+	"tidyit/pkg/report"
+	"tidyit/render/htmlreport"
+	"tidyit/render/view"
 )
 
-const appID = "com.inulty.Tidy"
+const appID = "com.inulty.TidyIt"
 
 func main() {
 	a := adw.NewApplication(appID, gio.ApplicationFlagsNone)
@@ -42,7 +42,7 @@ func main() {
 	os.Exit(a.Run(os.Args))
 }
 
-// window is one tidy window. Every field is touched only on the GTK main
+// window is one tidyit window. Every field is touched only on the GTK main
 // thread; the run goroutine hands results back with glib.IdleAdd.
 type window struct {
 	*adw.ApplicationWindow
@@ -101,7 +101,7 @@ func newWindow(a *adw.Application) *window {
 	w := &window{ApplicationWindow: adw.NewApplicationWindow(&a.Application), sel: keyOverview}
 	w.SetDefaultSize(1100, 780)
 	w.SetSizeRequest(360, 300)
-	w.SetTitle("Tidy")
+	w.SetTitle("Tidy It")
 
 	w.progress = adw.NewStatusPage()
 	w.progress.SetIconName("edit-find-symbolic")
@@ -216,7 +216,7 @@ func (w *window) buildSplit() *adw.NavigationSplitView {
 	refresh.SetActionName("win.rescan")
 	sideHeader := adw.NewHeaderBar()
 	sideHeader.PackStart(refresh)
-	sideHeader.SetTitleWidget(adw.NewWindowTitle("Tidy", ""))
+	sideHeader.SetTitleWidget(adw.NewWindowTitle("Tidy It", ""))
 	w.sidebarView = adw.NewToolbarView()
 	w.sidebarView.AddTopBar(sideHeader)
 
@@ -237,7 +237,7 @@ func (w *window) buildSplit() *adw.NavigationSplitView {
 	w.split = adw.NewNavigationSplitView()
 	w.split.SetMinSidebarWidth(260)
 	w.split.SetMaxSidebarWidth(320)
-	w.split.SetSidebar(adw.NewNavigationPage(w.sidebarView, "Tidy"))
+	w.split.SetSidebar(adw.NewNavigationPage(w.sidebarView, "Tidy It"))
 	w.contentPage = adw.NewNavigationPage(w.contentView, "Overview")
 	w.split.SetContent(w.contentPage)
 	return w.split
@@ -315,7 +315,7 @@ func (w *window) showPage(key string) {
 	w.contentView.SetContent(page)
 	w.contentPage.SetTitle(title)
 	w.contentTitle.SetTitle(title)
-	w.SetTitle("Tidy – " + title)
+	w.SetTitle("Tidy It – " + title)
 }
 
 // withHeader gives a page a plain header bar, for the states before
@@ -376,7 +376,7 @@ func (w *window) saveReport() {
 	}
 	d := gtk.NewFileDialog()
 	d.SetTitle("Save Report")
-	d.SetInitialName(fmt.Sprintf("tidy-%s-%s.html", res.rep.Host, res.rep.StartedAt.Format("2006-01-02")))
+	d.SetInitialName(fmt.Sprintf("tidyit-%s-%s.html", res.rep.Host, res.rep.StartedAt.Format("2006-01-02")))
 	d.Save(context.Background(), &w.Window, func(ar gio.AsyncResulter) {
 		f, err := d.SaveFinish(ar)
 		if err != nil {

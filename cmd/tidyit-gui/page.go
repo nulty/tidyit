@@ -10,8 +10,8 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 	"github.com/diamondburned/gotk4/pkg/pango"
 
-	"tidy/internal/fsx"
-	"tidy/pkg/report"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/report"
 )
 
 // itemCap bounds the rows built per check; a check can report thousands
@@ -254,7 +254,7 @@ func overviewPage(res *finished, w *window) *gtk.ScrolledWindow {
 		card.Append(bar)
 		var notes []string
 		if d.Flagged && res.diskSummary != "" {
-			notes = append(notes, sentence(res.diskSummary)+", so tidy flags it")
+			notes = append(notes, sentence(res.diskSummary)+", so Tidy It flags it")
 		}
 		for _, m := range res.otherMounts {
 			notes = append(notes, fmt.Sprintf("Also %s: %d%% full, %s free", m.Mount, m.Percent, m.Free))
@@ -451,7 +451,7 @@ func checkPage(r report.Result, w *window) *gtk.ScrolledWindow {
 		}
 		row := adw.NewActionRow()
 		row.SetTitle(esc(title))
-		row.SetSubtitle(esc("tidy -v --check " + r.ID + " lists them all"))
+		row.SetSubtitle(esc("tidyit -v --check " + r.ID + " lists them all"))
 		list.Append(row)
 	}
 	box.Append(list)
@@ -459,7 +459,7 @@ func checkPage(r report.Result, w *window) *gtk.ScrolledWindow {
 	if len(r.Notes) > 0 {
 		box.Append(notesLabel(r.Notes))
 	}
-	foot := wrapLabel("Hover a copy button to see its command. Tidy never runs anything.")
+	foot := wrapLabel("Hover a copy button to see its command. Tidy It never runs anything.")
 	foot.AddCSSClass("caption")
 	foot.AddCSSClass("dim-label")
 	box.Append(foot)

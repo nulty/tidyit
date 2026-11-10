@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"tidy/internal/engine"
-	"tidy/internal/fsx"
-	"tidy/pkg/report"
+	"tidyit/internal/engine"
+	"tidyit/internal/fsx"
+	"tidyit/pkg/report"
 )
 
 // neverOpened is an app snap the current user has never run, with the
@@ -80,9 +80,9 @@ func neverOpenedApps(ctx context.Context, _ engine.Input) (engine.Outcome, error
 	}
 	found := findNeverOpened(snaps, conns, usedByAnyone)
 	if len(found) > 0 && len(private) > 0 {
-		// Another account may use these apps and tidy can't see; saying
+		// Another account may use these apps and tidyit can't see; saying
 		// nothing beats suggesting the removal of someone else's app.
-		return engine.Outcome{}, engine.Skip("can't see whether other accounts use these apps (%s: home folder private); to check every account: sudo tidy --check snap.never-opened",
+		return engine.Outcome{}, engine.Skip("can't see whether other accounts use these apps (%s: home folder private); to check every account: sudo tidyit --check snap.never-opened",
 			strings.Join(private, ", "))
 	}
 	seed := seeded()
@@ -124,7 +124,7 @@ func neverOpenedApps(ctx context.Context, _ engine.Input) (engine.Outcome, error
 const passwdFile = "/etc/passwd"
 
 // accountSnapDirs returns ~/snap for every account a person logs in to
-// (UIDs 1000 and up with a login shell; root does not run desktop apps), split into those tidy
+// (UIDs 1000 and up with a login shell; root does not run desktop apps), split into those tidyit
 // can read and the names of accounts whose home it cannot read. A home
 // with no snap folder is readable: that account has never run a snap.
 func accountSnapDirs(passwd string) (readable []string, private []string) {
