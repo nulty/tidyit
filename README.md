@@ -46,7 +46,7 @@ ones a few seconds.
     eval "$(mise env -s bash)"
     go build -o bin/tidy-gui ./cmd/tidy-gui
     ln -s "$PWD/bin/tidy-gui" ~/.local/bin/tidy-gui
-    cp data/dev.tidy.Tidy.desktop ~/.local/share/applications/
+    cp data/com.inulty.Tidy.desktop ~/.local/share/applications/
 
 The bindings are pinned to gotk4-adwaita's `adw-1.5` branch to match the
 libadwaita in Ubuntu 24.04; newer branches need newer headers.

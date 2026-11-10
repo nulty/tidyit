@@ -13,7 +13,7 @@ for scheme in light dark; do
 	TIDY_GUI_SCREENSHOTS="$out/$scheme" ./bin/tidy-gui | while read -r kind path; do
 		[ "$kind" = shot ] || continue
 		# Raise the window (activating the app presents it), then grab it.
-		gdbus call --session --dest dev.tidy.Tidy --object-path /dev/tidy/Tidy \
+		gdbus call --session --dest com.inulty.Tidy --object-path /com/inulty/Tidy \
 			--method org.freedesktop.Application.Activate '{}' >/dev/null
 		sleep 0.3
 		id=$(xwininfo -root -tree | awk '/"Tidy( – [^"]*)?": \("tidy-gui"/ {print $1; exit}')

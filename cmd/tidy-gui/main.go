@@ -24,7 +24,7 @@ import (
 	"tidy/render/view"
 )
 
-const appID = "dev.tidy.Tidy"
+const appID = "com.inulty.Tidy"
 
 func main() {
 	a := adw.NewApplication(appID, gio.ApplicationFlagsNone)
