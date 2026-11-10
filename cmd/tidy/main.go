@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,6 +29,7 @@ import (
 	"tidy/internal/engine"
 	"tidy/internal/external"
 	"tidy/pkg/report"
+	"tidy/render/htmlreport"
 	"tidy/render/term"
 )
 
@@ -97,8 +99,7 @@ func registry() (*engine.Registry, []string) {
 
 type runOpts struct {
 	json, onlyFlagged, verbose, full bool
-	checks                           string
-	configPath                       string
+	checks, configPath, html         string
 }
 
 func runFlags(out io.Writer) (*flag.FlagSet, *runOpts) {
@@ -106,6 +107,7 @@ func runFlags(out io.Writer) (*flag.FlagSet, *runOpts) {
 	fs := flag.NewFlagSet("tidy run", flag.ContinueOnError)
 	fs.SetOutput(out)
 	fs.BoolVar(&o.json, "json", false, "print the report as JSON")
+	fs.StringVar(&o.html, "html", "", "write a self-contained HTML report to this file (- for stdout)")
 	fs.BoolVar(&o.onlyFlagged, "only-flagged", false, "hide checks that found nothing or were skipped")
 	fs.BoolVar(&o.full, "full", false, "list every flagged item with its command, grouped by plugin")
 	fs.BoolVar(&o.verbose, "v", false, "like --full, plus every item (no cap), timings, notes and plugin debug output")
@@ -166,6 +168,9 @@ func runCmd(args []string) error {
 	progress.done()
 	sortResults(rep, insts)
 
+	if o.html != "" {
+		return writeHTML(o.html, rep, groups(rep, reg))
+	}
 	if o.json {
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
@@ -184,6 +189,37 @@ func runCmd(args []string) error {
 		Width:       width,
 		Headline:    []string{"disk.usage"},
 	})
+	return nil
+}
+
+// writeHTML writes the HTML report to path, or stdout for "-". It writes
+// to a temporary file first so a failed run never leaves half a report.
+func writeHTML(path string, rep *report.Report, gs []term.Group) error {
+	opt := htmlreport.Options{Headline: []string{"disk.usage"}}
+	if path == "-" {
+		return htmlreport.Render(os.Stdout, rep, gs, opt)
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".tidy-report-*.html")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if err := htmlreport.Render(tmp, rep, gs, opt); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Chmod(0o644); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		return err
+	}
+	abs, _ := filepath.Abs(path)
+	fmt.Fprintf(os.Stderr, "tidy: wrote %s\n", abs)
 	return nil
 }
 

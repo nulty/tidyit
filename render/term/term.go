@@ -8,13 +8,11 @@ import (
 
 	"tidy/internal/fsx"
 	"tidy/pkg/report"
+	"tidy/render/view"
 )
 
 // Group is a titled set of results, e.g. all results of one plugin.
-type Group struct {
-	Name    string
-	Results []report.Result
-}
+type Group = view.Group
 
 // Options control the output.
 type Options struct {

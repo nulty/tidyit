@@ -15,6 +15,7 @@ It replaces the old `laptop-report` bash script (see git history).
     tidy -v               # everything, plus timings and plugin debug output
     tidy --check docker   # only some checks (ids, globs or plugin ids)
     tidy --json           # machine-readable report
+    tidy --html r.html    # self-contained HTML report to keep or share
     tidy checks -v        # list checks and their options
 
 Settings go in `~/.config/tidy/config.toml` (overrides only; see

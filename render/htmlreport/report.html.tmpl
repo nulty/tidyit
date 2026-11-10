@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="tidy">
+<title>Tidy report · {{.Host}} · {{.Date}}</title>
+<style>
+:root {
+  --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e3df;
+  --safe: #1f7a4d; --safe-bg: #e3f3ea; --review: #8a5a00; --review-bg: #fbefd5;
+  --manual: #55555a; --manual-bg: #ececef; --error: #b42318; --error-bg: #fde8e6;
+  --warn: #8a5a00; --code-bg: #f1f0ec; --focus: #2f6fdb;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161615; --panel: #1f1f1d; --text: #ecebe6; --muted: #a09f98; --line: #34332f;
+    --safe: #6fd39c; --safe-bg: #17352a; --review: #f0c065; --review-bg: #3a2e14;
+    --manual: #c4c4cb; --manual-bg: #2c2c31; --error: #ff8a80; --error-bg: #3d1a17;
+    --warn: #f0c065; --code-bg: #2a2a27; --focus: #7aa7ff;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Ubuntu, Cantarell, sans-serif; }
+main { max-width: 1000px; margin: 0 auto; padding: 32px 16px 64px; }
+h1 { font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 32px 0 10px; }
+.meta { color: var(--muted); margin: 4px 0 0; }
+.num { font-variant-numeric: tabular-nums; }
+code, .cmd { font: 13px/1.4 ui-monospace, "SF Mono", "Cascadia Mono", "Ubuntu Mono", monospace; }
+
+.headlines { margin: 20px 0 0; padding: 10px 14px; border-radius: 8px; background: var(--review-bg); color: var(--warn); font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-top: 20px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.card .big { font-size: 28px; font-weight: 650; line-height: 1.1; }
+.card .label { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.card.safe .big { color: var(--safe); } .card.review .big { color: var(--review); }
+
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 28px 0 10px; }
+.toolbar h2 { margin: 0 auto 0 0; }
+.toolbar button { font: inherit; font-size: 13px; padding: 4px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--text); }
+.toolbar button[aria-pressed="true"] { background: var(--text); color: var(--bg); border-color: var(--text); }
+button:focus-visible, summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.tag { display: inline-block; min-width: 64px; text-align: center; font-size: 12px; font-weight: 600;
+  padding: 1px 8px; border-radius: 999px; text-transform: lowercase; }
+.tag.safe { background: var(--safe-bg); color: var(--safe); }
+.tag.review { background: var(--review-bg); color: var(--review); }
+.tag.manual { background: var(--manual-bg); color: var(--manual); }
+.tag.error { background: var(--error-bg); color: var(--error); }
+
+.checks { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+details.check { border-top: 1px solid var(--line); }
+details.check:first-child { border-top: 0; }
+details.check > summary { list-style: none; cursor: pointer; display: grid; align-items: center;
+  grid-template-columns: 72px 64px minmax(0, 1fr) 48px; column-gap: 14px; padding: 12px 16px; }
+details.check > summary::-webkit-details-marker { display: none; }
+details.check > summary:hover { background: var(--bg); }
+.size { text-align: right; font-weight: 600; }
+.title { font-weight: 600; }
+.preview { display: block; color: var(--muted); font-weight: 400; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.count { text-align: right; color: var(--muted); }
+.count::after { content: " ▸"; } details[open] .count::after { content: " ▾"; }
+.body { padding: 4px 16px 16px; }
+.facts { color: var(--muted); margin: 0 0 10px; }
+.hint { margin: 10px 0 0; padding: 8px 12px; border-left: 3px solid var(--line); color: var(--muted); }
+.notes { margin: 8px 0 0; padding: 0; list-style: none; color: var(--muted); white-space: pre-wrap; }
+table.items { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.items th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+table.items td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.items tr:last-child td { border-bottom: 0; }
+table.items td.size { width: 72px; white-space: nowrap; }
+.label-cell { overflow-wrap: anywhere; }
+.detail { color: var(--muted); font-size: 13px; }
+.cmd-row { display: flex; gap: 6px; align-items: flex-start; margin-top: 4px; }
+.cmd-row .cmd { flex: 0 1 auto; min-width: 0; }
+.cmd-row .root, .cmd-row .copy { flex: none; white-space: nowrap; }
+.cmd { background: var(--code-bg); padding: 2px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+.root { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+.copy { font: inherit; font-size: 12px; padding: 1px 8px; border-radius: 4px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--muted); }
+
+.quiet { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 16px; }
+.quiet .row { display: grid; grid-template-columns: 72px minmax(0, 1fr); column-gap: 14px; padding: 8px 0; border-top: 1px solid var(--line); }
+.quiet .row:first-child { border-top: 0; }
+.quiet .row > .tag { align-self: start; margin-top: 2px; }
+.quiet .text { color: var(--muted); }
+.quiet details summary { cursor: pointer; color: var(--muted); }
+footer { margin-top: 40px; color: var(--muted); font-size: 13px; }
+.hidden { display: none !important; }
+
+@media (max-width: 640px) {
+  details.check > summary { grid-template-columns: 64px 48px minmax(0, 1fr); column-gap: 10px; padding: 12px; }
+  details.check > summary .count { display: none; }
+  table.items td.size { width: auto; }
+}
+@media print {
+  .toolbar button, .copy { display: none; }
+  details.check > .body { display: block; }
+}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Tidy report</h1>
+  <p class="meta">{{.Host}} · {{.Date}} · took {{.Duration}} · read-only: nothing was changed</p>
+  {{if .Headlines}}<p class="headlines">{{range $i, $h := .Headlines}}{{if $i}} · {{end}}{{$h}}{{end}}</p>{{end}}
+</header>
+
+<section class="cards" aria-label="Totals">
+  <div class="card safe"><div class="big num">{{or .Safe "0"}}</div><div class="label">marked safe to remove</div></div>
+  <div class="card review"><div class="big num">{{or .Review "0"}}</div><div class="label">to review before removing</div></div>
+  <div class="card"><div class="big num">{{len .Checks}}</div><div class="label">checks found something</div></div>
+  <div class="card"><div class="big num">{{len .OK}}</div><div class="label">checks found nothing{{if .Skipped}} · {{len .Skipped}} skipped{{end}}{{if .Errors}} · {{len .Errors}} failed{{end}}</div></div>
+</section>
+
+{{if .Checks}}
+<div class="toolbar">
+  <h2>Found</h2>
+  <button type="button" data-filter="all" aria-pressed="true">All {{len .Checks}}</button>
+  {{if index .ConfCounts "safe"}}<button type="button" data-filter="safe" aria-pressed="false">Safe {{index .ConfCounts "safe"}}</button>{{end}}
+  {{if index .ConfCounts "review"}}<button type="button" data-filter="review" aria-pressed="false">Review {{index .ConfCounts "review"}}</button>{{end}}
+  {{if index .ConfCounts "manual"}}<button type="button" data-filter="manual" aria-pressed="false">Manual {{index .ConfCounts "manual"}}</button>{{end}}
+  <button type="button" id="toggle-all">Expand all</button>
+</div>
+<section class="checks">
+{{range .Checks}}
+  <details class="check" data-conf="{{.Conf}}" id="{{.ID}}">
+    <summary>
+      <span class="tag {{.Conf}}">{{.Conf}}</span>
+      <span class="size num">{{.Size}}</span>
+      <span><span class="title">{{.Title}}</span><span class="preview">{{.Preview}}</span></span>
+      <span class="count num">{{.Count}}</span>
+    </summary>
+    <div class="body">
+      {{if .Summary}}<p class="facts">{{.Summary}}</p>{{end}}
+      <table class="items">
+        <thead><tr><th>Size</th><th>Item</th>{{if .Mixed}}<th>Confidence</th>{{end}}</tr></thead>
+        <tbody>
+        {{range .Items}}
+          <tr>
+            <td class="size num">{{.Size}}</td>
+            <td class="label-cell">
+              <div>{{.Label}}{{if .Detail}} <span class="detail">· {{.Detail}}</span>{{end}}</div>
+              {{if .Command}}<div class="cmd-row"><code class="cmd">{{.Command}}</code>{{if .NeedsRoot}}<span class="root" title="needs root">sudo</span>{{end}}<button type="button" class="copy" data-copy="{{.Command}}">Copy</button></div>{{end}}
+            </td>
+            {{if .ShowConf}}<td><span class="tag {{.Conf}}">{{.Conf}}</span></td>{{end}}
+          </tr>
+        {{end}}
+        </tbody>
+      </table>
+      {{range .Notes}}<p class="notes">{{.}}</p>{{end}}
+      {{if .Hint}}<p class="hint">{{.Hint}}</p>{{end}}
+    </div>
+  </details>
+{{end}}
+</section>
+{{end}}
+
+{{if .Errors}}
+<h2>Failed</h2>
+<section class="quiet">
+{{range .Errors}}<div class="row" id="{{.ID}}"><span class="tag error">error</span><span><strong>{{.Title}}</strong> <span class="text">{{.Text}}</span></span></div>{{end}}
+</section>
+{{end}}
+
+{{if .OK}}
+<h2>Found nothing</h2>
+<section class="quiet">
+{{range .OK}}<div class="row" id="{{.ID}}"><span class="tag safe">ok</span><span>{{.Title}}{{if .Text}} <span class="text">· {{.Text}}</span>{{end}}{{if .Notes}}<details><summary>details</summary><ul class="notes">{{range .Notes}}<li>{{.}}</li>{{end}}</ul></details>{{end}}</span></div>{{end}}
+</section>
+{{end}}
+
+{{if .Skipped}}
+<h2>Skipped</h2>
+<section class="quiet">
+{{range .Skipped}}<div class="row" id="{{.ID}}"><span class="tag manual">skipped</span><span>{{.Title}} <span class="text">· {{.Text}}</span></span></div>{{end}}
+</section>
+{{end}}
+
+<footer>Commands are suggestions; tidy never runs them. Sizes count disk blocks where tidy measured them, and decimal sizes where Docker or apt reported them. The full report is embedded as JSON in this file (<code>#tidy-report</code>).</footer>
+</main>
+<script type="application/json" id="tidy-report">{{.JSON}}</script>
+<script>
+(function () {
+  var checks = Array.prototype.slice.call(document.querySelectorAll("details.check"));
+  var filters = document.querySelectorAll("[data-filter]");
+  filters.forEach(function (b) {
+    b.addEventListener("click", function () {
+      var f = b.getAttribute("data-filter");
+      filters.forEach(function (o) { o.setAttribute("aria-pressed", String(o === b)); });
+      checks.forEach(function (c) { c.classList.toggle("hidden", f !== "all" && c.dataset.conf !== f); });
+    });
+  });
+  var toggle = document.getElementById("toggle-all");
+  if (toggle) toggle.addEventListener("click", function () {
+    var open = toggle.textContent === "Expand all";
+    checks.forEach(function (c) { if (!c.classList.contains("hidden")) c.open = open; });
+    toggle.textContent = open ? "Collapse all" : "Expand all";
+  });
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest(".copy");
+    if (!b || !navigator.clipboard) return;
+    navigator.clipboard.writeText(b.getAttribute("data-copy")).then(function () {
+      b.textContent = "Copied"; setTimeout(function () { b.textContent = "Copy"; }, 1200);
+    });
+  });
+  window.addEventListener("beforeprint", function () { checks.forEach(function (c) { c.open = true; }); });
+})();
+</script>
+</body>
+</html>

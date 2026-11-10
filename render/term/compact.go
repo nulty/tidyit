@@ -3,12 +3,12 @@ package term
 import (
 	"fmt"
 	"io"
-	"sort"
 	"strings"
 	"unicode/utf8"
 
 	"tidy/internal/fsx"
 	"tidy/pkg/report"
+	"tidy/render/view"
 )
 
 const (
@@ -20,36 +20,8 @@ const (
 // checks that found nothing or did not run.
 func renderCompact(w io.Writer, rep *report.Report, groups []Group, opt Options) {
 	c := newPalette(opt.Color)
-	headline := map[string]bool{}
-	for _, id := range opt.Headline {
-		headline[id] = true
-	}
-
-	var all, rows, oks, skipped, errs []report.Result
-	var heads []string
-	for _, g := range groups {
-		for _, r := range g.Results {
-			all = append(all, r)
-			switch {
-			case headline[r.ID] && r.Status == report.StatusFlag:
-				for _, it := range r.Items {
-					heads = append(heads, strings.TrimSpace(it.Label+" "+it.Detail))
-				}
-			case headline[r.ID] && r.Status == report.StatusOK:
-				// fine, nothing to say
-			case r.Status == report.StatusFlag:
-				rows = append(rows, r)
-			case r.Status == report.StatusOK:
-				oks = append(oks, r)
-			case r.Status == report.StatusSkipped:
-				skipped = append(skipped, r)
-			case r.Status == report.StatusError:
-				errs = append(errs, r)
-			}
-		}
-	}
-	// Biggest first; checks with no sizes keep their report order after them.
-	sort.SliceStable(rows, func(i, j int) bool { return rows[i].TotalSize() > rows[j].TotalSize() })
+	o := view.Build(groups, opt.Headline)
+	heads, rows, oks, skipped, errs := o.Headlines, o.Flagged, o.OK, o.Skipped, o.Errors
 
 	fmt.Fprintf(w, "%sTidy report%s  %s%s · %s · %s%s\n", c.bold, c.rst, c.dim,
 		rep.StartedAt.Format("2006-01-02 15:04"), rep.Host, rep.FinishedAt.Sub(rep.StartedAt).Round(100_000_000), c.rst)
@@ -57,11 +29,11 @@ func renderCompact(w io.Writer, rep *report.Report, groups []Group, opt Options)
 	for _, h := range heads {
 		line = append(line, c.yel+h+c.rst)
 	}
-	if n := report.Total(all, report.ConfidenceSafe); n > 0 {
-		line = append(line, c.grn+fsx.Human(n)+" safe to remove"+c.rst)
+	if o.Safe > 0 {
+		line = append(line, c.grn+fsx.Human(o.Safe)+" safe to remove"+c.rst)
 	}
-	if n := report.Total(all, report.ConfidenceReview); n > 0 {
-		line = append(line, fsx.Human(n)+" to review")
+	if o.Review > 0 {
+		line = append(line, fsx.Human(o.Review)+" to review")
 	}
 	if len(rows) == 0 && len(errs) == 0 {
 		line = append(line, c.grn+"nothing flagged"+c.rst)
