@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Plugin manifests can give options a `title`, a `unit` and a `format`
+  (`path` or `glob`), and give the plugin a `category` (`files`,
+  `packages` or `system`). All are optional; protocol stays 1. The
+  coming settings dialog uses them, and `tidyit checks -v` shows units.
+- Tidy It can write its config file: settings changes rewrite
+  `config.toml` with a "Managed by Tidy It" header. A hand-written file
+  is first copied to `config.toml.bak`, and a symlinked config is
+  written through the link.
+
 ## v0.1.0-beta.1 — 2026-11-10
 
 First beta. Tidy It is read-only: it shows what it found and the command

@@ -97,6 +97,16 @@ x = 1
 	if len(warnings) != 1 || !strings.Contains(warnings[0], "nope") {
 		t.Errorf("warnings = %v", warnings)
 	}
+	// Defaults are what the user's config is compared against.
+	if d := got["t.a"].Defaults.Int("n"); d != 1 {
+		t.Errorf("t.a default n = %d, want 1 (config must not leak into defaults)", d)
+	}
+	if d := got["preset-one"].Defaults.String("path"); d != "/p" {
+		t.Errorf("preset default path = %q, want the preset's /p", d)
+	}
+	if !got["t.b"].DefaultEnabled || got["t.b"].Enabled {
+		t.Errorf("t.b: DefaultEnabled should stay true when config disables it")
+	}
 }
 
 func TestBadOptionBecomesErrorResult(t *testing.T) {

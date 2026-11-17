@@ -61,3 +61,29 @@ func TestResolveErrors(t *testing.T) {
 		}
 	}
 }
+
+func TestValidateCategoryAndFormat(t *testing.T) {
+	base := func() Manifest {
+		return Manifest{ID: "p", Protocol: ProtocolVersion, Checks: []CheckSpec{{ID: "c", Title: "C",
+			Options: map[string]Option{"o": {Type: TypeStrings, Format: FormatPath}}}}}
+	}
+	m := base()
+	if err := m.Validate(); err != nil {
+		t.Fatalf("valid manifest rejected: %v", err)
+	}
+	if m.Page() != CategorySystem {
+		t.Errorf("no category should show on the system page, got %q", m.Page())
+	}
+	cases := map[string]func(*Manifest){
+		"category":            func(m *Manifest) { m.Category = "games" },
+		"unknown format":      func(m *Manifest) { m.Checks[0].Options["o"] = Option{Type: TypeStrings, Format: "url"} },
+		"only applies to str": func(m *Manifest) { m.Checks[0].Options["o"] = Option{Type: TypeInteger, Format: FormatPath} },
+	}
+	for want, breakIt := range cases {
+		m := base()
+		breakIt(&m)
+		if err := m.Validate(); err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("got %v, want error containing %q", err, want)
+		}
+	}
+}

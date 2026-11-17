@@ -4,6 +4,7 @@ id = "home-usage"
 name = "Home folder"
 version = "0.1.0"
 protocol = 1
+category = "files"
 description = "Shows which folders in your home directory use the most space."
 requires = ["du", "sort"]
 
@@ -14,6 +15,7 @@ description = "Informational: lists the biggest top-level folders, flags nothing
 timeout = "120s"
 
 [checks.options.count]
+title = "Folders to list"
 type = "integer"
 default = 10
 min = 1

@@ -20,9 +20,14 @@ type Instance struct {
 	Spec    *manifest.CheckSpec
 	Options manifest.Values
 	OptErr  error // set when the options failed validation
-	Enabled bool
-	Timeout time.Duration // 0 = runner default
-	Origin  string        // "default", "preset" or "config"
+	// Defaults are the option values before the user's config: the spec's
+	// defaults with the preset's values applied. Settings compare against
+	// these to show what was changed and to reset.
+	Defaults       manifest.Values
+	Enabled        bool
+	DefaultEnabled bool          // Enabled before the user's config
+	Timeout        time.Duration // 0 = runner default
+	Origin         string        // "default", "preset" or "config"
 }
 
 // Registry holds the plugins tidyit knows about, in display order.
@@ -71,7 +76,7 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 				continue
 			}
 			add(&Instance{ID: p.Manifest.ID + "." + spec.ID, Title: spec.Title, Hint: spec.Hint,
-				Plugin: p, Spec: spec, Enabled: !spec.DefaultOff, Origin: "default"})
+				Plugin: p, Spec: spec, Enabled: !spec.DefaultOff, DefaultEnabled: !spec.DefaultOff, Origin: "default"})
 		}
 		for _, ps := range p.Presets {
 			spec, ok := p.Manifest.Check(ps.Check)
@@ -83,7 +88,7 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 			if hint == "" {
 				hint = spec.Hint
 			}
-			add(&Instance{ID: ps.ID, Title: ps.Title, Hint: hint, Plugin: p, Spec: spec, Enabled: !spec.DefaultOff, Origin: "preset"})
+			add(&Instance{ID: ps.ID, Title: ps.Title, Hint: hint, Plugin: p, Spec: spec, Enabled: !spec.DefaultOff, DefaultEnabled: !spec.DefaultOff, Origin: "preset"})
 			presetOpts[ps.ID] = ps.Options
 		}
 	}
@@ -109,7 +114,7 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 		if title == "" {
 			title = id
 		}
-		add(&Instance{ID: id, Title: title, Hint: spec.Hint, Plugin: p, Spec: spec, Enabled: true, Origin: "config"})
+		add(&Instance{ID: id, Title: title, Hint: spec.Hint, Plugin: p, Spec: spec, Enabled: true, DefaultEnabled: true, Origin: "config"})
 	}
 
 	// Apply config to every instance: enabled flags (including on prefixes
@@ -140,6 +145,9 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 			}
 		}
 		in.Options, in.OptErr = in.Spec.Resolve(presetOpts[in.ID], cfgOpts)
+		// Presets and manifests are validated by tests, so this only fails
+		// for a broken external plugin, which OptErr then reports anyway.
+		in.Defaults, _ = in.Spec.Resolve(presetOpts[in.ID])
 	}
 	for _, id := range cfg.IDs() {
 		if !matched[id] && cfg.Checks[id].Use == "" {

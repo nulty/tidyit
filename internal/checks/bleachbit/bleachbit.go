@@ -27,6 +27,7 @@ func Plugin() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "bleachbit", Name: "BleachBit", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategoryFiles,
 			Requires: []string{"bleachbit"},
 			Checks: []manifest.CheckSpec{{
 				ID:          "preview",
@@ -37,10 +38,10 @@ func Plugin() *engine.Plugin {
 				// check, so it only runs when asked for.
 				DefaultOff: true,
 				Options: map[string]manifest.Option{
-					"selection": {Type: manifest.TypeString, Default: "preset",
+					"selection": {Title: "Cleaners", Type: manifest.TypeString, Default: "preset",
 						Enum:        []string{"preset", "all-but-warning", "custom"},
 						Description: "preset: what you ticked in the BleachBit window. all-but-warning: every cleaner without a warning. custom: the cleaners option"},
-					"cleaners": {Type: manifest.TypeStrings, Default: []string{},
+					"cleaners": {Title: "Custom cleaners", Type: manifest.TypeStrings, Default: []string{},
 						Description: "For selection = custom: cleaner options such as thumbnails.cache (see bleachbit --list-cleaners)"},
 				},
 			}},

@@ -22,13 +22,14 @@ func Plugin() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "networkmanager", Name: "NetworkManager", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategorySystem,
 			Requires: []string{"nmcli"},
 			Checks: []manifest.CheckSpec{{
 				ID:    "stale-connections",
 				Title: "Stale network connections",
 				Hint:  "manage in Advanced Network Configuration, or: nmcli connection delete uuid <uuid>",
 				Options: map[string]manifest.Option{
-					"unused_days": {Type: manifest.TypeInteger, Default: 365, Min: manifest.Ptr(1),
+					"unused_days": {Title: "Unused for at least", Unit: "days", Type: manifest.TypeInteger, Default: 365, Min: manifest.Ptr(1),
 						Description: "Flag Wi-Fi networks last used longer ago than this"},
 				},
 			}},

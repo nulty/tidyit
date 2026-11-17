@@ -17,13 +17,16 @@ const ProtocolVersion = 1
 
 // Manifest is a plugin's declaration, loaded from plugin.toml or built in.
 type Manifest struct {
-	ID          string   `toml:"id" json:"id"`
-	Name        string   `toml:"name" json:"name"`
-	Version     string   `toml:"version" json:"version"`
-	Protocol    int      `toml:"protocol" json:"protocol"`
-	Description string   `toml:"description" json:"description,omitempty"`
-	Requires    []string `toml:"requires" json:"requires,omitempty"` // binaries on PATH
-	NeedsRoot   bool     `toml:"needs_root" json:"needs_root,omitempty"`
+	ID          string `toml:"id" json:"id"`
+	Name        string `toml:"name" json:"name"`
+	Version     string `toml:"version" json:"version"`
+	Protocol    int    `toml:"protocol" json:"protocol"`
+	Description string `toml:"description" json:"description,omitempty"`
+	// Category places the plugin's checks in the GUI's settings: one of
+	// "files", "packages" or "system". Empty means "system".
+	Category  Category `toml:"category" json:"category,omitempty"`
+	Requires  []string `toml:"requires" json:"requires,omitempty"` // binaries on PATH
+	NeedsRoot bool     `toml:"needs_root" json:"needs_root,omitempty"`
 	// Lock names a group whose checks never run at the same time as each
 	// other, e.g. "dpkg" for anything that reads the dpkg database.
 	Lock string `toml:"lock" json:"lock,omitempty"`
@@ -51,6 +54,11 @@ func (m *Manifest) Validate() error {
 	if len(m.Checks) == 0 {
 		return fmt.Errorf("declares no checks")
 	}
+	switch m.Category {
+	case "", CategoryFiles, CategoryPackages, CategorySystem:
+	default:
+		return fmt.Errorf("category %q must be %q, %q or %q", m.Category, CategoryFiles, CategoryPackages, CategorySystem)
+	}
 	seen := map[string]bool{}
 	for i := range m.Checks {
 		c := &m.Checks[i]
@@ -74,6 +82,13 @@ func (m *Manifest) Validate() error {
 			case TypeInteger, TypeNumber, TypeBoolean, TypeString, TypeStrings:
 			default:
 				return fmt.Errorf("check %q: option %q has unknown type %q", c.ID, name, o.Type)
+			}
+			switch {
+			case o.Format == "":
+			case o.Format != FormatPath && o.Format != FormatGlob:
+				return fmt.Errorf("check %q: option %q has unknown format %q (want %q or %q)", c.ID, name, o.Format, FormatPath, FormatGlob)
+			case o.Type != TypeString && o.Type != TypeStrings:
+				return fmt.Errorf("check %q: option %q: format only applies to string and strings options", c.ID, name)
 			}
 		}
 		if _, err := c.Resolve(); err != nil {
@@ -101,6 +116,24 @@ type CheckSpec struct {
 	DefaultOff bool `toml:"default_off" json:"default_off,omitempty"`
 }
 
+// Category groups plugins in the GUI's settings.
+type Category string
+
+const (
+	CategoryFiles    Category = "files"
+	CategoryPackages Category = "packages"
+	CategorySystem   Category = "system"
+)
+
+// Page returns the category to show the plugin under: its own, or
+// "system" when it declares none.
+func (m *Manifest) Page() Category {
+	if m.Category == "" {
+		return CategorySystem
+	}
+	return m.Category
+}
+
 // Check returns the spec with the given id.
 func (m *Manifest) Check(id string) (*CheckSpec, bool) {
 	for i := range m.Checks {
@@ -122,6 +155,15 @@ const (
 	TypeStrings OptionType = "strings" // list of strings
 )
 
+// OptionFormat says what a string option holds, so a form can offer a
+// folder picker for paths and leave globs as plain text.
+type OptionFormat string
+
+const (
+	FormatPath OptionFormat = "path" // a file or folder; ~, $VARS and xdg:NAME allowed
+	FormatGlob OptionFormat = "glob" // a name pattern such as *.iso
+)
+
 // Option declares one typed setting. It is a small subset of JSON Schema so
 // it can be validated, set from the CLI and turned into a GUI form.
 type Option struct {
@@ -131,6 +173,12 @@ type Option struct {
 	Max         *float64   `toml:"max" json:"max,omitempty"`
 	Enum        []string   `toml:"enum" json:"enum,omitempty"`
 	Description string     `toml:"description" json:"description,omitempty"`
+	// Title is a short label for forms, e.g. "Minimum size". Empty means
+	// the option's name is shown.
+	Title string `toml:"title" json:"title,omitempty"`
+	// Unit follows a number in forms and listings, e.g. "MB" or "days".
+	Unit   string       `toml:"unit" json:"unit,omitempty"`
+	Format OptionFormat `toml:"format" json:"format,omitempty"`
 }
 
 // Values are resolved, validated option values for one check instance.

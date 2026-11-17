@@ -22,6 +22,7 @@ func Plugin() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "systemd", Name: "Services and logs", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategorySystem,
 			Requires: []string{"systemctl"},
 			Checks: []manifest.CheckSpec{
 				{
@@ -34,7 +35,7 @@ func Plugin() *engine.Plugin {
 					Title: "Systemd journal size",
 					Hint:  "trim: sudo journalctl --vacuum-time=4weeks   cap it: SystemMaxUse= in /etc/systemd/journald.conf",
 					Options: map[string]manifest.Option{
-						"warn_mb": {Type: manifest.TypeInteger, Default: 1024, Min: manifest.Ptr(1),
+						"warn_mb": {Title: "Warn at", Unit: "MB", Type: manifest.TypeInteger, Default: 1024, Min: manifest.Ptr(1),
 							Description: "Flag the journal when it uses at least this much disk"},
 					},
 				},

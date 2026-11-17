@@ -17,12 +17,13 @@ func Trash() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "trash", Name: "Trash", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategoryFiles,
 			Checks: []manifest.CheckSpec{{
 				ID:    "size",
 				Title: "Trash",
 				Hint:  "empty it: gio trash --empty",
 				Options: map[string]manifest.Option{
-					"min_size_mb": {Type: manifest.TypeInteger, Default: 100, Min: manifest.Ptr(0),
+					"min_size_mb": {Title: "Minimum size", Unit: "MB", Type: manifest.TypeInteger, Default: 100, Min: manifest.Ptr(0),
 						Description: "Flag the trash when it holds at least this much"},
 				},
 			}},

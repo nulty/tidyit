@@ -21,12 +21,13 @@ func Autostart() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "autostart", Name: "Autostart", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategorySystem,
 			Checks: []manifest.CheckSpec{{
 				ID:    "broken",
 				Title: "Login items",
 				Hint:  "remove your own entries; hide a system one for you only by copying it to ~/.config/autostart and adding Hidden=true",
 				Options: map[string]manifest.Option{
-					"include_system": {Type: manifest.TypeBoolean, Default: true,
+					"include_system": {Title: "Include system entries", Type: manifest.TypeBoolean, Default: true,
 						Description: "Also check system-wide entries in /etc/xdg/autostart"},
 				},
 			}},

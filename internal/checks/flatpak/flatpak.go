@@ -24,6 +24,7 @@ func Plugin() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "flatpak", Name: "Flatpak", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategoryPackages,
 			Requires: []string{"flatpak"},
 			Checks: []manifest.CheckSpec{{
 				ID:    "unused-runtimes",

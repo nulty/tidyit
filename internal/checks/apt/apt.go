@@ -21,6 +21,7 @@ func Plugin() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "apt", Name: "APT", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategoryPackages,
 			Requires: []string{"apt-get", "dpkg-query"},
 			Lock:     "dpkg",
 			Checks: []manifest.CheckSpec{

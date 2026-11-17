@@ -207,8 +207,13 @@ func checksCmd(args []string) error {
 		}
 		sort.Strings(names)
 		for _, n := range names {
+			opt := in.Spec.Options[n]
 			val, _ := json.Marshal(in.Options[n])
-			fmt.Printf("    %-18s = %-30s %s\n", n, val, in.Spec.Options[n].Description)
+			shown := string(val)
+			if opt.Unit != "" {
+				shown += " " + opt.Unit
+			}
+			fmt.Printf("    %-18s = %-30s %s\n", n, shown, opt.Description)
 		}
 	}
 	for _, w := range warnings {

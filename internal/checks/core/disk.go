@@ -28,14 +28,15 @@ func Disk() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "disk", Name: "Disk", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategoryFiles,
 			Checks: []manifest.CheckSpec{{
 				ID:    "usage",
 				Title: "Disk usage",
 				Hint:  "see what is using the space in the sections below, or run: du -h --max-depth=1 <mount> | sort -rh",
 				Options: map[string]manifest.Option{
-					"warn_percent": {Type: manifest.TypeInteger, Default: 85, Min: manifest.Ptr(1), Max: manifest.Ptr(100),
+					"warn_percent": {Title: "Warn when this full", Unit: "%", Type: manifest.TypeInteger, Default: 85, Min: manifest.Ptr(1), Max: manifest.Ptr(100),
 						Description: "Flag a filesystem when it is at least this full"},
-					"ignore_mounts": {Type: manifest.TypeStrings, Default: []string{},
+					"ignore_mounts": {Title: "Mounts to skip", Format: manifest.FormatPath, Type: manifest.TypeStrings, Default: []string{},
 						Description: "Mount points to leave out, e.g. /boot/efi"},
 				},
 			}},

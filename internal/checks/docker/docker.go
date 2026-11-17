@@ -25,6 +25,7 @@ func Plugin() *engine.Plugin {
 	return &engine.Plugin{
 		Manifest: manifest.Manifest{
 			ID: "docker", Name: "Docker", Version: "0.1.0", Protocol: manifest.ProtocolVersion,
+			Category: manifest.CategoryPackages,
 			Requires: []string{"docker"},
 			Checks: []manifest.CheckSpec{
 				{
@@ -32,9 +33,9 @@ func Plugin() *engine.Plugin {
 					Title: "Unused Docker images",
 					Hint:  "remove one: docker image rm <id>   all unused: docker image prune -a",
 					Options: map[string]manifest.Option{
-						"min_age_days": {Type: manifest.TypeInteger, Default: 0, Min: manifest.Ptr(0),
+						"min_age_days": {Title: "Minimum age", Unit: "days", Type: manifest.TypeInteger, Default: 0, Min: manifest.Ptr(0),
 							Description: "Ignore images created more recently than this"},
-						"ignore": {Type: manifest.TypeStrings, Default: []string{},
+						"ignore": {Title: "Images to ignore", Format: manifest.FormatGlob, Type: manifest.TypeStrings, Default: []string{},
 							Description: "Image names to never flag, as globs, e.g. postgres:* or *:latest"},
 					},
 				},
@@ -48,7 +49,7 @@ func Plugin() *engine.Plugin {
 					Title: "Unused Docker volumes",
 					Hint:  "volumes can hold data, check first: docker volume inspect <name>",
 					Options: map[string]manifest.Option{
-						"include_anonymous": {Type: manifest.TypeBoolean, Default: true,
+						"include_anonymous": {Title: "Include anonymous volumes", Type: manifest.TypeBoolean, Default: true,
 							Description: "Include anonymous volumes (created without a name)"},
 					},
 				},
