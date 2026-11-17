@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v0.1.0-beta.2 — 2026-11-17
+
+Settings in the app. Tidy It is still read-only.
 
 - `tidyit-gui`: Preferences (Ctrl+,) with Files, Packages and System
   pages. Turn each check on or off, change its options, or reset them;
@@ -8,12 +10,16 @@
   check's page has a Settings button that opens its options.
 - Plugin manifests can give options a `title`, a `unit` and a `format`
   (`path` or `glob`), and give the plugin a `category` (`files`,
-  `packages` or `system`). All are optional; protocol stays 1. The
-  coming settings dialog uses them, and `tidyit checks -v` shows units.
+  `packages` or `system`). All are optional; protocol stays 1.
+  Preferences uses them, and `tidyit checks -v` shows units.
+- Option names `use`, `title`, `enabled` and `timeout` are now rejected,
+  as they clash with the config file's own keys.
 - Tidy It can write its config file: settings changes rewrite
   `config.toml` with a "Managed by Tidy It" header. A hand-written file
   is first copied to `config.toml.bak`, and a symlinked config is
   written through the link.
+- A check whose config values are invalid still shows its options (at
+  their defaults) in the app, so the bad value can be fixed there.
 
 ## v0.1.0-beta.1 — 2026-11-10
 
