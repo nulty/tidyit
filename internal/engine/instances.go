@@ -148,6 +148,18 @@ func (r *Registry) Instances(cfg *config.Config) ([]*Instance, []string) {
 		// Presets and manifests are validated by tests, so this only fails
 		// for a broken external plugin, which OptErr then reports anyway.
 		in.Defaults, _ = in.Spec.Resolve(presetOpts[in.ID])
+		if in.Defaults == nil {
+			in.Defaults = manifest.Values{}
+		}
+		// Bad config values make the check an error result, but Options
+		// still holds something valid (the defaults) for settings to show
+		// and edit, so it is never nil.
+		if in.OptErr != nil {
+			in.Options = manifest.Values{}
+			for k, v := range in.Defaults {
+				in.Options[k] = v
+			}
+		}
 	}
 	for _, id := range cfg.IDs() {
 		if !matched[id] && cfg.Checks[id].Use == "" {

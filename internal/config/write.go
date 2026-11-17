@@ -170,6 +170,12 @@ func Update(path string, change func(*Config) error) (backup string, err error) 
 	// replacing the link with a file.
 	if real, err := filepath.EvalSymlinks(path); err == nil {
 		path = real
+	} else if target, err := os.Readlink(path); err == nil {
+		// A link to a file that doesn't exist yet: create the target.
+		if !filepath.IsAbs(target) {
+			target = filepath.Join(filepath.Dir(path), target)
+		}
+		path = target
 	}
 	old, err := os.ReadFile(path)
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {

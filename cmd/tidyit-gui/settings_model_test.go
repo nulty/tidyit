@@ -165,3 +165,23 @@ func TestPresetsHideTemplateDescription(t *testing.T) {
 		t.Errorf("default check subtitle = %q", got)
 	}
 }
+
+func TestUserDefinedChecksCantReset(t *testing.T) {
+	in := inst("old-isos", nil)
+	in.Origin = "config"
+	in.Options["paths"] = []string{"~/Downloads"}
+	if canReset(in) {
+		t.Error("resetting a user-defined check would wipe its folders")
+	}
+	if got := checkSubtitle(in); got != "Your own check, defined in config.toml" {
+		t.Errorf("subtitle = %q", got)
+	}
+}
+
+func TestNumberDigitsNeverRound(t *testing.T) {
+	for v, want := range map[float64]uint{0: 2, 0.5: 2, 0.125: 3, 1.0 / 3: 6} {
+		if got := numberDigits(v); got != want {
+			t.Errorf("numberDigits(%v) = %d, want %d", v, got, want)
+		}
+	}
+}

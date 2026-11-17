@@ -78,6 +78,9 @@ func (m *Manifest) Validate() error {
 			}
 		}
 		for name, o := range c.Options {
+			if ReservedOptions[name] {
+				return fmt.Errorf("check %q: option name %q is reserved for the config file", c.ID, name)
+			}
 			switch o.Type {
 			case TypeInteger, TypeNumber, TypeBoolean, TypeString, TypeStrings:
 			default:
@@ -97,6 +100,11 @@ func (m *Manifest) Validate() error {
 	}
 	return nil
 }
+
+// ReservedOptions are config keys every check entry already has, so no
+// option may use them: [checks.x] timeout = "30s" is the check's time
+// limit, not an option.
+var ReservedOptions = map[string]bool{"use": true, "title": true, "enabled": true, "timeout": true}
 
 // CheckSpec is one check a plugin provides.
 type CheckSpec struct {

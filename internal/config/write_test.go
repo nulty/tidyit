@@ -194,3 +194,23 @@ func TestInherited(t *testing.T) {
 		t.Errorf("no prefix should mean nil")
 	}
 }
+
+func TestUpdateWritesThroughDanglingSymlink(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "dotfiles"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(dir, "config.toml")
+	if err := os.Symlink("dotfiles/tidyit.toml", link); err != nil { // relative, target missing
+		t.Fatal(err)
+	}
+	if _, err := Update(link, func(c *Config) error { c.SetOption("a.b", "n", 1); return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if fi, _ := os.Lstat(link); fi.Mode()&os.ModeSymlink == 0 {
+		t.Error("the dangling symlink was replaced by a file")
+	}
+	if !strings.Contains(read(t, filepath.Join(dir, "dotfiles", "tidyit.toml")), "n = 1") {
+		t.Error("the link's target was not created")
+	}
+}

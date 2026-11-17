@@ -109,6 +109,22 @@ x = 1
 	}
 }
 
+// A bad config value must not leave Options nil: settings shows and
+// edits it, and writing to a nil map panics.
+func TestBadOptionKeepsDefaultOptions(t *testing.T) {
+	r := &Registry{}
+	r.Add(testPlugin())
+	insts, _ := r.Instances(loadTOML(t, "[checks.t.a]\nn = \"many\"\n"))
+	a := byID(insts)["t.a"]
+	if a.OptErr == nil {
+		t.Fatal("want an option error")
+	}
+	if a.Options == nil || a.Options.Int("n") != 1 {
+		t.Errorf("Options = %#v, want the defaults", a.Options)
+	}
+	a.Options["n"] = 2 // what settings does; must not panic
+}
+
 func TestBadOptionBecomesErrorResult(t *testing.T) {
 	r := &Registry{}
 	r.Add(testPlugin())

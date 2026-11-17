@@ -272,7 +272,9 @@ func (s *settings) checkPage(in *engine.Instance, refresh func()) *adw.Preferenc
 		s.reset(in)
 		refresh()
 	})
-	opts.SetHeaderSuffix(resetAll)
+	if canReset(in) {
+		opts.SetHeaderSuffix(resetAll)
+	}
 
 	// After each change: show reset buttons only where something changed.
 	var updaters []func()
@@ -286,7 +288,7 @@ func (s *settings) checkPage(in *engine.Instance, refresh func()) *adw.Preferenc
 		row, undo := s.optionRow(in, name, refresh, update)
 		opts.Add(row)
 		if undo != nil {
-			updaters = append(updaters, func() { undo.SetVisible(isChanged(in, name)) })
+			updaters = append(updaters, func() { undo.SetVisible(canReset(in) && isChanged(in, name)) })
 		}
 	}
 	run.NotifyProperty("active", update)
@@ -348,7 +350,8 @@ func (s *settings) optionRow(in *engine.Instance, name string, refresh, update f
 		var digits uint
 		value := float64(in.Options.Int(name))
 		if o.Type == manifest.TypeNumber {
-			digits, value = 2, in.Options.Float(name)
+			value = in.Options.Float(name)
+			digits = numberDigits(value)
 		}
 		row := adw.NewSpinRow(gtk.NewAdjustment(value, lo, hi, 1, 10, 0), 1, digits)
 		row.SetTitle(label)

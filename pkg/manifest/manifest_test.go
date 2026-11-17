@@ -78,6 +78,7 @@ func TestValidateCategoryAndFormat(t *testing.T) {
 		"category":            func(m *Manifest) { m.Category = "games" },
 		"unknown format":      func(m *Manifest) { m.Checks[0].Options["o"] = Option{Type: TypeStrings, Format: "url"} },
 		"only applies to str": func(m *Manifest) { m.Checks[0].Options["o"] = Option{Type: TypeInteger, Format: FormatPath} },
+		"reserved":            func(m *Manifest) { m.Checks[0].Options["timeout"] = Option{Type: TypeString} },
 	}
 	for want, breakIt := range cases {
 		m := base()

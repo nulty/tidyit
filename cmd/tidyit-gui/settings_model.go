@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"tidyit/internal/config"
@@ -161,9 +162,29 @@ func checkDescription(in *engine.Instance) string {
 	return in.Spec.Description
 }
 
+// canReset reports whether a check's options can go back to defaults. A
+// check the user defined in config (use = "paths.scan") is its options:
+// "resetting" its folders would leave it scanning nothing, so it can't.
+func canReset(in *engine.Instance) bool { return in.Origin != "config" }
+
+// numberDigits is how many decimals a number option shows: at least 2,
+// and enough for the saved value, so showing it never rounds it (GTK
+// re-reads a spin row's text and would save the rounded value).
+func numberDigits(v float64) uint {
+	s := strconv.FormatFloat(v, 'f', -1, 64)
+	n := 0
+	if i := strings.IndexByte(s, '.'); i >= 0 {
+		n = len(s) - i - 1
+	}
+	return uint(min(max(n, 2), 6))
+}
+
 // checkSubtitle sums up a check's settings for its row: what was changed,
 // else what the check does.
 func checkSubtitle(in *engine.Instance) string {
+	if !canReset(in) {
+		return "Your own check, defined in config.toml"
+	}
 	switch ch := changedOptions(in); len(ch) {
 	case 0:
 		return checkDescription(in)
