@@ -404,30 +404,33 @@ func checkPage(r report.Result, w *window) *gtk.ScrolledWindow {
 		box.Append(hint)
 	}
 
+	// The buttons share a row; the summary gets its own line, so it never
+	// squeezes between them in a narrow window.
 	cmds := commands(r)
-	if len(cmds) > 1 || r.Summary != "" {
-		bar := gtk.NewBox(gtk.OrientationHorizontal, 12)
-		if len(cmds) > 1 {
-			b := gtk.NewButton()
-			content := adw.NewButtonContent()
-			content.SetIconName("edit-copy-symbolic")
-			content.SetLabel("Copy All Commands")
-			b.SetChild(content)
-			b.AddCSSClass("round-button")
-			b.SetVAlign(gtk.AlignCenter)
-			b.SetTooltipText(fmt.Sprintf("Copy %d commands, one per line", len(cmds)))
-			all := strings.Join(cmds, "\n") + "\n"
-			n := len(cmds)
-			b.ConnectClicked(func() { w.copy(all, plural(n, "command", "commands")) })
-			bar.Append(b)
-		}
-		if r.Summary != "" {
-			l := wrapLabel(sentence(r.Summary))
-			l.AddCSSClass("dim-label")
-			l.SetHExpand(true)
-			bar.Append(l)
-		}
-		box.Append(bar)
+	bar := gtk.NewBox(gtk.OrientationHorizontal, 12)
+	if len(cmds) > 1 {
+		b := gtk.NewButton()
+		content := adw.NewButtonContent()
+		content.SetIconName("edit-copy-symbolic")
+		content.SetLabel("Copy All Commands")
+		b.SetChild(content)
+		b.AddCSSClass("round-button")
+		b.SetVAlign(gtk.AlignCenter)
+		b.SetTooltipText(fmt.Sprintf("Copy %d commands, one per line", len(cmds)))
+		all := strings.Join(cmds, "\n") + "\n"
+		n := len(cmds)
+		b.ConnectClicked(func() { w.copy(all, plural(n, "command", "commands")) })
+		bar.Append(b)
+	}
+	settingsButton := checkSettingsButton(r.ID, w)
+	settingsButton.SetHExpand(true)
+	settingsButton.SetHAlign(gtk.AlignEnd)
+	bar.Append(settingsButton)
+	box.Append(bar)
+	if r.Summary != "" {
+		l := wrapLabel(sentence(r.Summary))
+		l.AddCSSClass("dim-label")
+		box.Append(l)
 	}
 
 	list := gtk.NewListBox()

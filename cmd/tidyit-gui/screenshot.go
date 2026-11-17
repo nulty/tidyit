@@ -8,6 +8,8 @@ import (
 
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
+
+	"tidyit/internal/engine"
 )
 
 // Screenshot mode is a development aid for design work. With
@@ -48,13 +50,48 @@ func (w *window) takeScreenshots(dir string) {
 	var next func(i int)
 	next = func(i int) {
 		if i == len(keys) {
-			w.narrowShots(dir, keys)
+			w.settingsShots(dir, func() { w.narrowShots(dir, keys) })
 			return
 		}
 		w.open(keys[i])
 		w.scrollPass(dir, fmt.Sprintf("wide-%d-%s", i, keys[i]), w.scroll, func() { next(i + 1) })
 	}
 	next(0)
+}
+
+// settingsShots captures Preferences: the Files page, a check's options,
+// the Packages page, then the dialog opened from a check's page. It
+// changes nothing.
+func (w *window) settingsShots(dir string, then func()) {
+	s := w.showSettings("")
+	if s == nil {
+		then()
+		return
+	}
+	w.stop(dir, "settings-0-files", func() {
+		s.openCheck(s.insts[instIndex(s.insts, "downloads")])
+		w.stop(dir, "settings-1-downloads", func() {
+			s.PopSubpage()
+			s.SetVisiblePageName("packages")
+			w.stop(dir, "settings-2-packages", func() {
+				s.Close()
+				if s := w.showSettings("trash.size"); s != nil {
+					w.stop(dir, "settings-3-from-check", func() { s.Close(); then() })
+					return
+				}
+				then()
+			})
+		})
+	})
+}
+
+func instIndex(insts []*engine.Instance, id string) int {
+	for i, in := range insts {
+		if in.ID == id {
+			return i
+		}
+	}
+	return 0
 }
 
 // narrowShots shrinks the window below the breakpoint and captures the

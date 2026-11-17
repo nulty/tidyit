@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- `tidyit-gui`: Preferences (Ctrl+,) with Files, Packages and System
+  pages. Turn each check on or off, change its options, or reset them;
+  changes save straight away, and a banner offers to check again. Each
+  check's page has a Settings button that opens its options.
 - Plugin manifests can give options a `title`, a `unit` and a `format`
   (`path` or `glob`), and give the plugin a `category` (`files`,
   `packages` or `system`). All are optional; protocol stays 1. The

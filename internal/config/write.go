@@ -249,3 +249,20 @@ func writeAtomic(path string, data []byte, mode fs.FileMode) error {
 	}
 	return os.Rename(tmp, path)
 }
+
+// Inherited returns the enabled setting id gets from its nearest prefix
+// entry, e.g. [checks.docker] for docker.unused-images, ignoring id's own
+// entry. It is nil when no prefix sets one.
+func (c *Config) Inherited(id string) *bool {
+	for p := id; ; {
+		i := strings.LastIndex(p, ".")
+		if i < 0 {
+			return nil
+		}
+		p = p[:i]
+		if e := c.Checks[p]; e != nil && e.Enabled != nil {
+			v := *e.Enabled
+			return &v
+		}
+	}
+}

@@ -39,6 +39,7 @@ func main() {
 	})
 	a.SetAccelsForAction("win.rescan", []string{"<Control>r", "F5"})
 	a.SetAccelsForAction("win.save", []string{"<Control>s"})
+	a.SetAccelsForAction("win.preferences", []string{"<Control>comma"})
 	a.SetAccelsForAction("window.close", []string{"<Control>w"})
 	os.Exit(a.Run(os.Args))
 }
@@ -60,7 +61,9 @@ type window struct {
 	contentPage  *adw.NavigationPage
 	contentView  *adw.ToolbarView
 	contentTitle *adw.WindowTitle
-	scroll       *gtk.ScrolledWindow // the shown page, for screenshots
+	// settingsBanner offers to check again after settings change.
+	settingsBanner *adw.Banner
+	scroll         *gtk.ScrolledWindow // the shown page, for screenshots
 
 	cancel  context.CancelFunc // stops the current run, nil when idle
 	closing bool
@@ -135,6 +138,9 @@ func newWindow(a *adw.Application) *window {
 	w.save = gio.NewSimpleAction("save", nil)
 	w.save.ConnectActivate(func(*glib.Variant) { w.saveReport() })
 	w.AddAction(w.save)
+	prefs := gio.NewSimpleAction("preferences", nil)
+	prefs.ConnectActivate(func(*glib.Variant) { w.showSettings("") })
+	w.AddAction(prefs)
 
 	w.ConnectCloseRequest(func() bool {
 		w.closing = true
@@ -152,6 +158,7 @@ func (w *window) run() {
 	if w.cancel != nil {
 		return
 	}
+	w.settingsBanner.SetRevealed(false)
 	cfg, err := app.LoadConfig("")
 	if err != nil {
 		w.showFailure("Can't read settings", fmt.Sprintf("%s\n\nFix or remove %s and check again.", err, config.DefaultPath()))
@@ -227,6 +234,7 @@ func (w *window) buildSplit() *adw.NavigationSplitView {
 
 	menu := gio.NewMenu()
 	menu.Append("Save Report as HTML…", "win.save")
+	menu.Append("Preferences", "win.preferences")
 	menu.Append("About Tidy It", "win.about")
 	menuButton := gtk.NewMenuButton()
 	menuButton.SetIconName("open-menu-symbolic")
@@ -239,6 +247,10 @@ func (w *window) buildSplit() *adw.NavigationSplitView {
 	header.PackEnd(menuButton)
 	w.contentView = adw.NewToolbarView()
 	w.contentView.AddTopBar(header)
+	w.settingsBanner = adw.NewBanner("Settings changed since this check")
+	w.settingsBanner.SetButtonLabel("Check Again")
+	w.settingsBanner.ConnectButtonClicked(w.run)
+	w.contentView.AddTopBar(w.settingsBanner)
 
 	w.split = adw.NewNavigationSplitView()
 	w.split.SetMinSidebarWidth(260)

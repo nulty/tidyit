@@ -2,6 +2,11 @@
 # Capture the Tidy It GUI's whole results page, light and dark, as PNGs.
 # Usage: scripts/gui-screenshots OUTDIR   (X11 session; needs xwd, ffmpeg)
 # Build bin/tidyit-gui first. Closes any running tidyit-gui.
+# On a busy desktop another window can cover it and every shot comes out
+# the same; run it on a private display instead:
+#   GDK_BACKEND=x11 xvfb-run -a -s "-screen 0 1400x1000x24" scripts/gui-screenshots OUTDIR
+# The run reads your config; set XDG_CONFIG_HOME to an empty folder to
+# capture the defaults.
 set -euo pipefail
 out=${1:?usage: $0 OUTDIR}
 cd "$(dirname "$0")/.."

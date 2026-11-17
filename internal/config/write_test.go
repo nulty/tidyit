@@ -176,3 +176,21 @@ func TestUpdateWritesThroughSymlink(t *testing.T) {
 		t.Errorf("target not updated:\n%s", read(t, real))
 	}
 }
+
+func TestInherited(t *testing.T) {
+	off, on := false, true
+	c := &Config{Checks: map[string]*Entry{
+		"a":     {Enabled: &off},
+		"a.b":   {Enabled: &on},
+		"a.b.c": {Enabled: &off},
+	}}
+	if v := c.Inherited("a.b.c"); v == nil || !*v {
+		t.Errorf("a.b.c should inherit a.b's true, got %v", v)
+	}
+	if v := c.Inherited("a.x"); v == nil || *v {
+		t.Errorf("a.x should inherit a's false")
+	}
+	if c.Inherited("a") != nil || c.Inherited("z.y") != nil {
+		t.Errorf("no prefix should mean nil")
+	}
+}
